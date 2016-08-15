@@ -34,7 +34,7 @@ app.use(function(req, res, next) {
   var subject = createSubject(req);
   var message = createMessage(req);
   
-  log.debug('Sending message', subject, message);    
+  log.debug('Sending message to', subject, message);    
 
   bus.request(subject, message, function(err, reply) {
     if(err) {
