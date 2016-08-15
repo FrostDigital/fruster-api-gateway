@@ -10,6 +10,7 @@ var cors = require('cors');
 var http = require('http');
 var timeout = require('connect-timeout');
 var log = require('./log');
+var uuid = require('uuid');
 
 var app = express();
 
@@ -41,7 +42,7 @@ app.use(function(req, res, next) {
       // At the moment any error indicates timeout due to missing answer from bus
       var notFoundErr = new Error('Not found');
       notFoundErr.status = 404;
-      next(notFoundErr);
+      return next(notFoundErr);
     }
     
     log.debug('Got reply %j', reply);
@@ -70,7 +71,9 @@ function createSubject(req) {
 }
 
 function createMessage(req) {
+  // TODO: Req body
   return {
+    reqId: uuid.v1(),
     method: req.method,
     path: req.path,
     query: req.query,

@@ -21,7 +21,7 @@ function publish(subject, json) {
 function request(subject, json, cb) {
   var id = client.request(subject, serializeMsg(json), null, function(response) {
     log.debug('Got response', response);
-    cb(null, response);
+    cb(null, response);          
   }); 
 
   // Timeout
