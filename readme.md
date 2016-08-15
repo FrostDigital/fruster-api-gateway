@@ -31,7 +31,7 @@ Configuration is set with environment variables. All config defaults to values t
     PORT = 3000
     
     # Allow origin for CORS
-    # Examples: `*`, `http://www.example.com`,  `"http://www.example.com,http://localhost:9000"`
+    # Examples: `*`, `http://www.example.com`, `"http://www.example.com,http://localhost:9000"`
     ALLOW_ORIGIN = "*""
 
     # If stack traces should be included in error responses
