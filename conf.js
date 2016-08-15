@@ -8,7 +8,7 @@ module.exports = {
   allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || '*',
 
   // If stack traces should be leaked error responses
-  printStacktrace: process.env.PRINT_STACKTRACE || true,
+  printStacktrace: parseBool(process.env.PRINT_STACKTRACE, true),
 
   // NATS servers, set multiple if using cluster
   // Example: `['nats://10.23.45.1:4222', 'nats://10.23.41.8:4222']`
@@ -25,6 +25,10 @@ module.exports = {
   // Applications log level (error|warn|info|debug|silly)
   logLevel: process.env.LOG_LEVEL || 'debug'
 };
+
+function parseBool(str, defaultVal) {
+  return !str ? defaultVal : str === 'true';
+}
 
 function parseArray(str) {
   if(str) {

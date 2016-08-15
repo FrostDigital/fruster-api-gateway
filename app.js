@@ -90,11 +90,16 @@ app.use(function(err, req, res, next) {
   
   res.status(err.status || 500);
   
-  res.json({
-    message: err.message,    
-    stacktrace: conf.printStacktrace ? err.stack : null
-  });
+  var json = {
+    message: err.message
+  };
+
+  if(conf.printStacktrace) {    
+    json.stacktrace = err.stack;
+  }
   
+  res.json(json);
+
   if(res.status === 500) {
     console.error(err.stack);    
   }
