@@ -27,24 +27,28 @@ app.use(timeout(conf.httpTimeout));
 // TODO: Pre-flight 
 //app.options('*', cors()); // include before other routes
 
-app.use(bodyParser.json({ limit: conf.maxRequestSize }));
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json({
+  limit: conf.maxRequestSize
+}));
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
 app.use(cookieParser());
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   var subject = createSubject(req);
   var message = createMessage(req);
-  
-  log.debug('Sending message to', subject, message);    
 
-  bus.request(subject, message, function(err, reply) {
-    if(err) {
+  log.debug('Sending message to', subject, message);
+
+  bus.request(subject, message, function (err, reply) {
+    if (err) {
       // At the moment any error indicates timeout due to missing answer from bus
       var notFoundErr = new Error('Not found');
       notFoundErr.status = 404;
       return next(notFoundErr);
     }
-    
+
     log.debug('Got reply %j', reply);
   });
 
@@ -66,53 +70,55 @@ function createSubject(req) {
   var path = req.path.split('/');
   return ['http', method]
     .concat(path)
-    .filter(function (val) {return val;})
+    .filter(function (val) {
+      return val;
+    })
     .join('.').toLowerCase();
 }
 
 function createMessage(req) {
-  // TODO: Req body
   return {
     reqId: uuid.v1(),
     method: req.method,
     path: req.path,
     query: req.query,
-    headers: req.headers
+    headers: req.headers,
+    data: req.body
   };
 }
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
 });
 
 // error handlers  
-app.use(function(err, req, res, next) {
-  
+app.use(function (err, req, res, next) {
+
   res.status(err.status || 500);
-  
+
   var json = {
     message: err.message
   };
 
-  if(conf.printStacktrace) {    
+  if (conf.printStacktrace) {
     json.stacktrace = err.stack;
   }
-  
+
   res.json(json);
 
-  if(res.status === 500) {
-    console.error(err.stack);    
+  if (res.status === 500) {
+    console.error(err.stack);
   }
 });
 
 http.createServer(app)
   .listen(conf.port)
-  .on('error', function(err) {
+  .on('error', function (err)  {
     log.error('Failed starting server:', err);
   })
-  .on('listening', function() {
+  .on('listening', function ()  {
     log.info('HTTP server listening on', conf.port);
   });
