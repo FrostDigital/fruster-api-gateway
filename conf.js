@@ -23,7 +23,9 @@ module.exports = {
   busTimeout: process.env.BUS_TIMEOUT || '1s',
 
   // Applications log level (error|warn|info|debug|silly)
-  logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug'
+  logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
+
+  unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false)
 };
 
 function parseBool(str, defaultVal) {

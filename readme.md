@@ -52,4 +52,8 @@ Configuration is set with environment variables. All config defaults to values t
     # Max size of requests that we can handle
     # Examples: `1mb`, `100kb`
     MAX_REQUEST_SIZE = '100kb'
+    
+    # If fruster bus message data should be sent directly in response or if
+    # same JSON structure as internal bus messages should be kept    
+    UNWRAP_MESSAGE_DATA = false
 
