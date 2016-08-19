@@ -48,7 +48,6 @@ describe('API Gateway', function() {
   });
 
   it('should create and recieve bus message for HTTP GET', function(done) {
-
     bus.subscribe('http.get.foo', function(req) {
       var msg = req.msg;
       
@@ -56,21 +55,19 @@ describe('API Gateway', function() {
       expect(msg.method).toBe('GET');            
       expect(msg.reqId).toBeDefined();            
       
-      bus.publish(req.replyTo, { status: 200, data: { foo: 'bar' } });
+      bus.publish(req.replyTo, { status: 201, data: { foo: 'bar' } });
     });
 
     get('/foo', function(error, response, body) {
       
-      expect(response.statusCode).toBe(200);      
+      expect(response.statusCode).toBe(201);      
       expect(body.data.foo).toBe('bar');
       
       done();      
     }); 
-
   });
 
   it('should create and recieve bus message for HTTP GET in unwrapped mode', function(done) {
-
     conf.unwrapMessageData = true;
 
     bus.subscribe('http.get.foo', function(req) {      
@@ -82,7 +79,17 @@ describe('API Gateway', function() {
       conf.unwrapMessageData = false;
       done();      
     }); 
+  });
 
+  it('should return error status code from bus', function(done) {      
+    bus.subscribe('http.post.bar', function(req) {      
+      bus.publish(req.replyTo, { status: 420 });
+    });
+
+    post('/bar', {}, function(error, response, body) {        
+      expect(response.statusCode).toBe(420);      
+      done();      
+    });     
   });
 
   // it('block large requests', function(done) { 
