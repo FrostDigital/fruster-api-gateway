@@ -46,6 +46,8 @@ app.use(function(req, httpRes, next) {
     if(err.status == 408) {
       err.status = 404;
       httpRes.status(404);
+    } else {
+      httpRes.status(err.status);
     }
 
     httpRes      
