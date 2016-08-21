@@ -26,14 +26,15 @@ app.use(function(req, httpRes, next) {
   var subject = createSubject(req);
   var message = createMessage(req);
   
-  log.debug('Sending message to', subject, message);    
+  log.debug('Sending message to %s %j', subject, message);    
 
   bus.request(subject, message, ms(conf.busTimeout)).then(function(busRes) {
 
-    log.debug('Got reply', busRes.data);
-    
+    log.debug('Got reply', busRes.data);    
+
     httpRes
       .status(busRes.status)
+      .set(busRes.headers)
       .header('X-Fruster-Req-Id', busRes.reqId)
       .json(conf.unwrapMessageData ? busRes.data : busRes);
 
@@ -51,6 +52,7 @@ app.use(function(req, httpRes, next) {
     }
 
     httpRes      
+      .set(err.headers)
       .header('X-Fruster-Req-Id', err.reqId)
       .json(err);    
   });

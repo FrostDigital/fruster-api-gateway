@@ -1,5 +1,3 @@
-//process.env.MAX_REQUEST_SIZE = '1kb';
-
 var request = require('request'),
     fs = require('fs'),
     conf = require('../conf'),
@@ -53,12 +51,21 @@ describe('API Gateway', function() {
       expect(req.method).toBe('GET');            
       expect(req.reqId).toBeDefined();            
       
-      return { status: 201, data: { foo: 'bar' } };
+      return { 
+        status: 201,
+        headers: {
+          'A-Header': 'foo'
+        },
+        data: { 
+          foo: 'bar' 
+        } 
+      };
     });
 
     get('/foo', function(error, response, body) {
-      
+
       expect(response.statusCode).toBe(201);      
+      expect(response.headers['a-header']).toBe('foo');
       expect(body.data.foo).toBe('bar');
       
       done();      
@@ -81,11 +88,17 @@ describe('API Gateway', function() {
 
   it('should return error status code from bus', function(done) {      
     bus.subscribe('http.post.bar', function(req) {      
-      return { status: 420 };
+      return { 
+        status: 420,
+        headers: {
+          'x-foo': 'bar'
+        }
+      };
     });
 
     post('/bar', {}, function(error, response, body) {        
       expect(response.statusCode).toBe(420);      
+      expect(response.headers['x-foo']).toBe('bar');      
       done();      
     });     
   });
