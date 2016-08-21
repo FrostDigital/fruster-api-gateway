@@ -1,6 +1,14 @@
-var log = require('winston');
+var winston = require('winston');
 var conf = require('./conf');
 
-log.level = conf.logLevel;
-
-module.exports = log;
+module.exports = new winston.Logger({
+  transports: [        
+    new winston.transports.Console({
+      level: conf.logLevel,
+      handleExceptions: true,
+      json: false,
+      colorize: true
+    })
+  ],
+  exitOnError: false
+});
