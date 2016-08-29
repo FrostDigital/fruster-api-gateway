@@ -11,20 +11,27 @@ module.exports = {
       .join('.').toLowerCase();
   },
 
-  createMessage: req => {  
-    return {
-      reqId: uuid.v1(),
+  createResponse: (req, reqId, user) => {  
+    var o = {
+      reqId: reqId,
       method: req.method,
       path: req.path,
       query: req.query,
       headers: req.headers,
-      data: req.body
+      data: req.body      
     };
+
+    if(user) {
+      o.user = user;
+    }
+
+    return o;
   },
 
   sanitizeResponse: resp => {
     var clone = Object.assign(resp);
-    delete clone.headers;    
+    delete clone.headers;
+    delete clone.user;    
     return clone;    
   }
 

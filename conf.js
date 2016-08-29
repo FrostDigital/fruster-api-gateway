@@ -25,7 +25,9 @@ module.exports = {
   // Applications log level (error|warn|info|debug|silly)
   logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
 
-  unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false)
+  unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
+
+  authCookieName: process.env.AUTH_COOKIE_NAME || 'jwt'
 };
 
 function parseBool(str, defaultVal) {

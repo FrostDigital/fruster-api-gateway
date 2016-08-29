@@ -13,6 +13,7 @@
     "cors": "^2.7.1",
     "debug": "~2.2.0",
     "express": "~4.13.4",
+    "express-bearer-token": "^2.1.0",
     "fruster-bus": "0.0.5",
     "install": "^0.8.1",
     "jade": "~1.11.0",
@@ -26,6 +27,10 @@
   "devDependencies": {
     "jasmine": "^2.4.1",
     "request": "^2.74.0",
-    "jasmine-spec-reporter": "^2.7.0"
+    "jasmine-spec-reporter": "^2.7.0",
+    "nats-server-control": "0.0.1"
+  },
+  "engines": {
+    "node": "6.4.0"
   }
 }
