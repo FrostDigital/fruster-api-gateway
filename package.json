@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./app.js",
-    "test": "./node_modules/.bin/jasmine"
+    "test": "node ./spec/support/jasmine-runner.js"
   },
   "dependencies": {
     "body-parser": "~1.15.1",
@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "jasmine": "^2.4.1",
-    "request": "^2.74.0"
+    "request": "^2.74.0",
+    "jasmine-spec-reporter": "^2.7.0"
   }
 }
