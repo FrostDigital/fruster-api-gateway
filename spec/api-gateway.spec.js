@@ -67,6 +67,7 @@ describe('API Gateway', function() {
       expect(response.statusCode).toBe(201);      
       expect(response.headers['a-header']).toBe('foo');
       expect(body.data.foo).toBe('bar');
+      expect(body.headers).toBeUndefined();
       
       done();      
     }); 

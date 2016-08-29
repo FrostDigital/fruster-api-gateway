@@ -10,8 +10,10 @@ var cors = require('cors');
 var http = require('http');
 var timeout = require('connect-timeout');
 var log = require('./log');
-var uuid = require('uuid');
 var ms = require('ms');
+var utils = require('./utils');
+
+const reqIdHeader = 'X-Fruster-Req-Id';
 
 var app = express();
 
@@ -23,10 +25,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 app.use(function(req, httpRes, next) {
-  var subject = createSubject(req);
-  var message = createMessage(req);
+  var subject = utils.createSubject(req);
+  var message = utils.createMessage(req);
   
-  log.debug('Sending message to %s %j', subject, message);    
+  log.debug('Sending to subject', subject, 'message', message);    
 
   bus.request(subject, message, ms(conf.busTimeout)).then(function(busRes) {
 
@@ -35,11 +37,10 @@ app.use(function(req, httpRes, next) {
     httpRes
       .status(busRes.status)
       .set(busRes.headers)
-      .header('X-Fruster-Req-Id', busRes.reqId)
-      .json(conf.unwrapMessageData ? busRes.data : busRes);
+      .header(reqIdHeader, busRes.reqId)
+      .json(conf.unwrapMessageData ? busRes.data : utils.sanitizeResponse(busRes));
 
   }).catch(function(err) {
-
     log.debug('Got error', err.status, err.title, err.detail);
 
     // Translate 408 timeout to 404 since timeout indicates that no one 
@@ -53,41 +54,11 @@ app.use(function(req, httpRes, next) {
 
     httpRes      
       .set(err.headers)
-      .header('X-Fruster-Req-Id', err.reqId)
+      .header(reqIdHeader, err.reqId)
       .json(err);    
   });
 
 });
-
-/**
- * Transforms request path to bus subject.
- * 
- * Examples:
- * `GET /cat/123 => http.get.cat.123`
- * `POST / => http.post`
- * 
- * @param  {Object} req to transform
- * @return {String} bus subject
- */
-function createSubject(req) {
-  var method = req.method;
-  var path = req.path.split('/');
-  return ['http', method]
-    .concat(path)
-    .filter(function (val) {return val;})
-    .join('.').toLowerCase();
-}
-
-function createMessage(req) {  
-  return {
-    reqId: uuid.v1(),
-    method: req.method,
-    path: req.path,
-    query: req.query,
-    headers: req.headers,
-    data: req.body
-  };
-}
 
 app.use(function(err, req, res, next) {  
   res.status(err.status || 500);
