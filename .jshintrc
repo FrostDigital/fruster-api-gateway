@@ -1,4 +1,5 @@
 {
   "node": true,
-  "latedef": true
+  "latedef": false,
+  "esnext": true
 }
