@@ -14,7 +14,7 @@
     "debug": "~2.2.0",
     "express": "~4.13.4",
     "express-bearer-token": "^2.1.0",
-    "fruster-bus": "0.0.5",
+    "fruster-bus": "~0.0.7",
     "install": "^0.8.1",
     "jade": "~1.11.0",
     "morgan": "~1.7.0",
