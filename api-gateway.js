@@ -67,7 +67,7 @@ function handleError(err, httpRes, reqId) {
       httpRes.status(err.status);
     }
 
-    validateRequestId(err.reqId, reqId);
+    setRequestId(reqId, err);
     
     httpRes      
       .set(err.headers)
@@ -124,7 +124,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   return bus.request(subject, message, ms(conf.busTimeout)).then(function(busRes) {
     log.debug('Got reply', busRes.data);    
 
-    validateRequestId(busRes.reqId, reqId);
+    setRequestId(reqId, busRes);
 
     httpRes
       .status(busRes.status)
@@ -134,9 +134,10 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   });
 }
 
-function validateRequestId(apiGatewayReqId, busReqId) {
-  if(apiGatewayReqId != busReqId) {
-    log.warn('Request id in bus response (' + busReqId +') does not match the one set by API gateway (' + apiGatewayReqId + ')');
+function setRequestId(reqId, resp) {
+  if(resp.reqId != reqId) {
+    log.warn('Request id in bus response (' + resp.reqId +') does not match the one set by API gateway (' + reqId + ')');
+    resp.reqId = reqId;
   }  
 }
 module.exports = {
