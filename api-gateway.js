@@ -34,7 +34,7 @@ app.use(function(httpReq, httpRes, next) {
 
   decodeToken(httpReq, reqId)
     .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken))
-    .catch(err => handleError(err, httpRes));
+    .catch(err => handleError(err, httpRes, reqId));
 });
 
 app.use(function(err, req, res, next) {  
@@ -55,7 +55,7 @@ app.use(function(err, req, res, next) {
   }
 });
 
-function handleError(err, httpRes) {    
+function handleError(err, httpRes, reqId) {    
     log.debug('Got error', err.status, err.error);
 
     // Translate 408 timeout to 404 since timeout indicates that no one 
@@ -67,9 +67,11 @@ function handleError(err, httpRes) {
       httpRes.status(err.status);
     }
 
+    validateRequestId(err.reqId, reqId);
+    
     httpRes      
       .set(err.headers)
-      .header(reqIdHeader, err.reqId)
+      .header(reqIdHeader, reqId)
       .json(err);    
 }
 
@@ -122,14 +124,21 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   return bus.request(subject, message, ms(conf.busTimeout)).then(function(busRes) {
     log.debug('Got reply', busRes.data);    
 
+    validateRequestId(busRes.reqId, reqId);
+
     httpRes
       .status(busRes.status)
       .set(busRes.headers)
-      .header(reqIdHeader, busRes.reqId)
+      .header(reqIdHeader, reqId)
       .json(conf.unwrapMessageData ? busRes.data : utils.sanitizeResponse(busRes));
   });
 }
 
+function validateRequestId(apiGatewayReqId, busReqId) {
+  if(apiGatewayReqId != busReqId) {
+    log.warn('Request id in bus response (' + busReqId +') does not match the one set by API gateway (' + apiGatewayReqId + ')');
+  }  
+}
 module.exports = {
   start: function(httpServerPort, busAddress) {
 
