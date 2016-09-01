@@ -30,6 +30,8 @@ app.use(bearerToken());
 app.use(function(httpReq, httpRes, next) {
   const reqId = uuid.v4(); 
   
+  log.debug(httpReq.statusCode, httpReq.path, reqId);
+
   decodeToken(httpReq, reqId)
     .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken))
     .catch(err => handleError(err, httpRes));
@@ -82,7 +84,17 @@ function decodeToken(httpReq, reqId) {
       data: encodedToken      
     };
 
-    return bus.request('auth-service.decode-token', decodeReq).then(resp => resp.data);    
+    return bus
+      .request('auth-service.decode-token', decodeReq)
+      .then(resp => resp.data)
+      .catch(err => {
+        if(err.status == 401 || err.status == 403) {
+          log.debug('Failed to decode token (got error ' + err.code + ') will expire cookie if present');
+          err.headers = err.headers || {};
+          err.headers['Set-Cookie'] = 'jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';          
+        }
+        throw err;
+      });    
   }
 
   return Promise.resolve({});
