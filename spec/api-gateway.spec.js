@@ -171,6 +171,18 @@ describe('API Gateway', function() {
     }); 
   });
 
+  it('should set reqId in HTTP response even though none is returned from bus', function(done) {    
+    bus.subscribe('http.get.foo', function(req) {       
+      return { status: 200};
+    });
+
+    get('/foo', function(error, response, body) {        
+      expect(response.statusCode).toBe(200);       
+      expect(body.reqId).toBeDefined();       
+      done();      
+    }); 
+  });
+
   function get(path, headers, cb) {
     if(typeof(headers) === 'function') {
       cb = headers;
