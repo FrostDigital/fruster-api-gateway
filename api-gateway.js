@@ -18,6 +18,7 @@ var bearerToken = require('express-bearer-token');
 const reqIdHeader = 'X-Fruster-Req-Id';
 
 var app = express();
+var dateStarted = new Date();
 
 app.use(logger('dev'));
 app.use(cors({ origin: conf.allowOrigin }));
@@ -26,6 +27,10 @@ app.use(bodyParser.json({ limit: conf.maxRequestSize }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(bearerToken());
+
+app.get('/health', function (req, res) {
+  res.json({ status: 'Alive since ' + dateStarted });
+});
 
 app.use(function(httpReq, httpRes, next) {
   const reqId = uuid.v4(); 
