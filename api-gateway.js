@@ -110,11 +110,10 @@ function decodeToken(httpReq, reqId) {
 function getToken(httpReq) {
   var token;
 
-  if(httpReq.cookies[conf.authCookieName]) {
-    token = httpReq.cookies[conf.authCookieName];
-  }
-  else if(httpReq.token) {
+  if(httpReq.token) {
     token = httpReq.token;
+  } else if(httpReq.cookies[conf.authCookieName]) {
+    token = httpReq.cookies[conf.authCookieName];
   }
 
   return token;
