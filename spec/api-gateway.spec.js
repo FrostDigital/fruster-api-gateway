@@ -43,6 +43,7 @@ describe('API Gateway', function() {
       expect(req.path).toBe('/foo');      
       expect(req.method).toBe('GET');            
       expect(req.reqId).toBeDefined();            
+      expect(req.query.foo).toBe('bar');            
       
       return { 
         status: 201,
@@ -55,7 +56,7 @@ describe('API Gateway', function() {
       };
     });
 
-    get('/foo', function(error, response, body) {
+    get('/foo?foo=bar', function(error, response, body) {
 
       expect(response.statusCode).toBe(201);      
       expect(response.headers['a-header']).toBe('foo');

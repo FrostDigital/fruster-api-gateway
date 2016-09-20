@@ -11,7 +11,7 @@ module.exports = {
       .join('.').toLowerCase();
   },
 
-  createResponse: (req, reqId, user) => {  
+  createRequest: (req, reqId, user) => {  
     var o = {
       reqId: reqId,
       method: req.method,

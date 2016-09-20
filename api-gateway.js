@@ -1,24 +1,22 @@
-'use strict';
-
-var express = require('express');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var conf = require('./conf');
-var bus = require('fruster-bus');
-var cors = require('cors');
-var http = require('http');
-var timeout = require('connect-timeout');
-var log = require('./log');
-var ms = require('ms');
-var utils = require('./utils');
-var uuid = require('uuid');
-var bearerToken = require('express-bearer-token');
+const express = require('express');
+const logger = require('morgan');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const conf = require('./conf');
+const bus = require('fruster-bus');
+const cors = require('cors');
+const http = require('http');
+const timeout = require('connect-timeout');
+const log = require('fruster-log');
+const ms = require('ms');
+const utils = require('./utils');
+const uuid = require('uuid');
+const bearerToken = require('express-bearer-token');
 
 const reqIdHeader = 'X-Fruster-Req-Id';
 
-var app = express();
-var dateStarted = new Date();
+const app = express();
+const dateStarted = new Date();
 
 app.use(logger('dev'));
 app.use(cors({ origin: conf.allowOrigin }));
@@ -121,7 +119,7 @@ function getToken(httpReq) {
 
 function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   var subject = utils.createSubject(httpReq);
-  var message = utils.createResponse(httpReq, reqId, decodedToken);
+  var message = utils.createRequest(httpReq, reqId, decodedToken);
 
   log.debug('Sending to subject', subject, 'message', message);    
 

@@ -22,9 +22,6 @@ module.exports = {
 
   busTimeout: process.env.BUS_TIMEOUT || '1s',
 
-  // Applications log level (error|warn|info|debug|silly)
-  logLevel: parseLogLevel(process.env.LOG_LEVEL) || 'debug',
-
   unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
 
   authCookieName: process.env.AUTH_COOKIE_NAME || 'jwt'
@@ -39,11 +36,4 @@ function parseArray(str) {
     return str.split(',');
   }
   return null;
-}
-
-function parseLogLevel(str) {
-  if(str) {
-    // align log level naming so trace -> silly (which is winston specific)
-    return str.toLowerCase() === 'trace' ? 'silly' : str;    
-  }
 }
