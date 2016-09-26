@@ -18,7 +18,7 @@ const reqIdHeader = 'X-Fruster-Req-Id';
 const app = express();
 const dateStarted = new Date();
 
-app.use(logger('dev'));
+//app.use(logger('dev'));
 app.use(cors({ origin: conf.allowOrigin }));
 app.use(timeout(conf.httpTimeout));
 app.use(bodyParser.json({ limit: conf.maxRequestSize }));
@@ -32,8 +32,8 @@ app.get('/health', function (req, res) {
 
 app.use(function(httpReq, httpRes, next) {
   const reqId = uuid.v4(); 
-  
-  log.debug(httpReq.statusCode, httpReq.path, reqId);
+    
+  log.debug(httpReq.method, httpReq.path, reqId);
 
   decodeToken(httpReq, reqId)
     .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken))
@@ -121,10 +121,12 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   var subject = utils.createSubject(httpReq);
   var message = utils.createRequest(httpReq, reqId, decodedToken);
 
-  log.debug('Sending to subject', subject, 'message', message);    
+  log.debug('Sending to subject', subject);    
+  log.silly(message);    
 
   return bus.request(subject, message, ms(conf.busTimeout)).then(function(busRes) {
-    log.debug('Got reply', busRes.data);    
+    log.debug('Got reply', busRes.status);    
+    log.silly(busRes.data);    
 
     setRequestId(reqId, busRes);
 
