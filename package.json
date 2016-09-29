@@ -20,8 +20,12 @@
     "jade": "~1.11.0",
     "morgan": "~1.7.0",
     "ms": "^0.7.1",
+    "multipart-pipe": "^0.4.0",
+    "multiparty": "^4.1.2",
     "nats": "^0.6.4",
+    "node-http-client": "0.0.0",
     "npm": "^3.10.6",
+    "request": "^2.75.0",
     "uuid": "^2.0.2",
     "winston": "^2.2.0"
   },

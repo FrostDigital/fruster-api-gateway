@@ -1,5 +1,5 @@
 module.exports = {
-  
+
   // Port API gateway listens on
   port: process.env.PORT || 3000,
 
@@ -16,15 +16,15 @@ module.exports = {
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
-  maxRequestSize: process.env.MAX_REQUEST_SIZE || '100kb',
+  maxRequestSize: process.env.MAX_REQUEST_SIZE ||  '100mb',
 
-  httpTimeout: process.env.HTTP_TIMEOUT || '2s',
+  httpTimeout: process.env.HTTP_TIMEOUT ||  '2s',
 
   busTimeout: process.env.BUS_TIMEOUT || '1s',
 
   unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
 
-  authCookieName: process.env.AUTH_COOKIE_NAME || 'jwt'
+  authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt'
 };
 
 function parseBool(str, defaultVal) {
@@ -32,7 +32,7 @@ function parseBool(str, defaultVal) {
 }
 
 function parseArray(str) {
-  if(str) {
+  if (str) {
     return str.split(',');
   }
   return null;
