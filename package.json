@@ -29,6 +29,7 @@
     "winston": "^2.2.0"
   },
   "devDependencies": {
+    "multiparty": "^4.1.2",
     "jasmine": "^2.4.1",
     "request": "^2.74.0",
     "jasmine-spec-reporter": "^2.7.0",

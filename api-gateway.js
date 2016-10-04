@@ -71,7 +71,7 @@ app.use(function (err, req, res, next) {
 });
 
 function handleError(err, httpRes, reqId) {
-  log.debug('Got error', err.status, err.error);
+  log.debug('Got error', err.status, err.error, "for", reqId);
 
   /*
    * Translates 408 timeout to 404 since timeout indicates that no one 
@@ -146,7 +146,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function checkProtocol(resp) {
-    log.debug("Request ", reqId, " will use ", resp.protocol, " protocol");
+    log.debug("Request", reqId, "will use", resp.options.protocol, "protocol");
     log.silly(resp);
 
     switch (resp.options.protocol) {
@@ -181,7 +181,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     log.debug(httpReq.method.toLowerCase() + ' to url ' + httpOptions.url);
     log.silly(message);
 
-    if (httpReq.headers["content-type"].includes("multipart")) {
+    if (httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart")) {
       let requestOptions = {
         uri: httpOptions.url
       };
@@ -189,9 +189,10 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
 
       return new Promise(resolve => {
         httpReq
-          .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
+          .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
             if (!error) {
-              resolve(JSON.parse(body));
+              var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+              resolve(body);
             } else {
               let errorObj = {
                 status: 500,
