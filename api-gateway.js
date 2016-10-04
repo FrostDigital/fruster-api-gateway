@@ -146,14 +146,14 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function checkProtocol(resp) {
-    log.debug("Request", reqId, "will use", resp.options.protocol, "protocol");
+    log.debug("Request", reqId, "will use", resp.data.protocol, "protocol");
     log.silly(resp);
 
-    switch (resp.options.protocol) {
+    switch (resp.data.protocol) {
     case "NATS":
       return busCall();
     case "HTTP":
-      return httpCall(resp.options.http)
+      return httpCall(resp.data.http)
         .then(prepareResponse);
     }
   }

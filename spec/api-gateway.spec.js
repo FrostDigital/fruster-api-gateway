@@ -390,7 +390,7 @@ describe('API Gateway', function () {
     });
   });
 
-  fit('should send additional data in headers when forwarding POST request with multipart/form-data via http to url specified by bus.subscribe', function (done) {
+  it('should send additional data in headers when forwarding POST request with multipart/form-data via http to url specified by bus.subscribe', function (done) {
     let expressPort = Math.floor(Math.random() * 6000 + 3000);
     let app = express();
     let server = http.createServer(app);
