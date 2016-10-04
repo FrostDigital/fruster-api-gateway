@@ -23,9 +23,6 @@ const dateStarted = new Date();
 
 var util = require('util');
 
-//TEMP=???
-var multiparty = require('multiparty');
-
 //app.use(logger('dev'));
 app.use(cors({
   origin: conf.allowOrigin
@@ -43,14 +40,6 @@ app.use(bearerToken());
 app.get('/health', function (req, res) {
   res.json({
     status: 'Alive since ' + dateStarted
-  });
-});
-
-app.post('/test-response-http', function (req, res) {
-  res.json({
-    status: 200,
-    reqId: req.body.reqId,
-    data: "hello"
   });
 });
 
@@ -144,11 +133,11 @@ function getToken(httpReq) {
 }
 
 function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
-  var subject = utils.createSubject(httpReq);
-  var message = utils.createRequest(httpReq, reqId, decodedToken);
+  let subject = utils.createSubject(httpReq);
+  let message = utils.createRequest(httpReq, reqId, decodedToken);
 
   return optionsCall()
-    .then(switchProtocol);
+    .then(checkProtocol);
 
   function optionsCall() {
     return bus.request("options." + subject, {
@@ -156,16 +145,16 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     }, ms(conf.busTimeout));
   }
 
-  function switchProtocol(resp) {
+  function checkProtocol(resp) {
     log.debug("Request ", reqId, " will use ", resp.protocol, " protocol");
     log.silly(resp);
 
-    switch (resp.protocol) {
+    switch (resp.options.protocol) {
     case "NATS":
       return busCall();
     case "HTTP":
-      return prepareFormData()
-        .then(() => httpCall(resp.http));
+      return httpCall(resp.options.http)
+        .then(prepareResponse);
     }
   }
 
@@ -174,7 +163,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     log.silly(message);
 
     return bus.request(subject, message, ms(conf.busTimeout))
-      .then(function (busRes) {
+      .then((busRes) => {
         log.debug('Got reply', busRes.status);
         log.silly(busRes.data);
 
@@ -192,75 +181,61 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     log.debug(httpReq.method.toLowerCase() + ' to url ' + httpOptions.url);
     log.silly(message);
 
-    var requestOptions = {
-      uri: httpOptions.url,
-      json: message,
-      'content-type': message.headers['content-type'],
-      end: false
-    };
+    if (httpReq.headers["content-type"].includes("multipart")) {
+      let requestOptions = {
+        uri: httpOptions.url
+      };
+      httpReq.headers.data = JSON.stringify(message);
 
-    _.forIn(httpReq.files, field => {
-      field.forEach(file => {
-        if (!requestOptions.formData) {
-          requestOptions.formData = {};
-        }
-        requestOptions.formData[file.fieldName] = fs.createReadStream(file.path);
+      return new Promise(resolve => {
+        httpReq
+          .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
+            if (!error) {
+              resolve(JSON.parse(body));
+            } else {
+              let errorObj = {
+                status: 500,
+                error: error
+              };
+              handleError(errorObj, httpRes, message.reqId);
+            }
+          }));
       });
-    });
+    } else {
+      let requestOptions = {
+        uri: httpOptions.url,
+        json: message,
+        'content-type': message.headers['content-type']
+      };
 
-    console.log("\n", requestOptions, "\n");
-
-    return new Promise(resolve => {
-        let forwardedRequest = request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
-          _.forIn(httpReq.files, field => {
-            field.forEach(file => {
-              fs.unlink(file.path);
-            });
-          });
-
+      return new Promise(resolve => {
+        request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
           if (!error) {
             resolve(body);
           } else {
-            var errorObj = {
+            let errorObj = {
               status: 500,
               error: error
             };
             handleError(errorObj, httpRes, message.reqId);
           }
         });
-      })
-      .then(resp => {
-        log.debug('Got reply', resp.status);
-        log.silly(resp.data);
-
-        setRequestId(reqId, resp);
-
-        httpRes
-          .status(resp.status)
-          .set(resp.headers)
-          .header(reqIdHeader, reqId)
-          .json(conf.unwrapMessageData ? resp.data : utils.sanitizeResponse(resp));
-      })
-      .catch(e => console.error(e));
+      });
+    }
   }
 
-  function prepareFormData() {
-    return new Promise(resolve => {
-      if (httpReq.headers["content-type"].includes("multipart/form-data")) {
-        var form = new multiparty.Form();
+  function prepareResponse(resp) {
+    log.debug('Got reply', resp.status);
+    log.silly(resp);
 
-        form.on('close', function () {
-          console.log('Upload completed!');
-          resolve();
-        });
+    setRequestId(reqId, resp);
 
-        form.parse(httpReq, function (err, fields, files) {
-          httpReq.files = files;
-        });
-      } else {
-        resolve();
-      }
-    });
+    httpRes
+      .status(resp.status)
+      .set(resp.headers)
+      .header(reqIdHeader, reqId)
+      .header("status", resp.status)
+      .json(conf.unwrapMessageData ? resp.data : utils.sanitizeResponse(resp));
   }
 }
 
