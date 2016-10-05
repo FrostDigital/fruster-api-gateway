@@ -237,12 +237,12 @@ describe('API Gateway', function () {
   });
 
   /*
-   * Using a bus.subscribe for the withHttpUrl-url is only for testing, 
+   * Using a bus.subscribe for the forwardToHttpUrl-url is only for testing, 
    * it would defeat the purpose in a live situation.
    */
   it('should forward GET request via http to url specified by bus.subscribe', function (done) {
 
-    bus.subscribe('http.get.foo').withHttpUrl(baseUri + "/foobar");
+    bus.subscribe('http.get.foo').forwardToHttpUrl(baseUri + "/foobar");
 
     bus.subscribe('http.get.foobar', function (req) {
       return {
@@ -259,7 +259,7 @@ describe('API Gateway', function () {
 
   it('should forward POST request via http to url specified by bus.subscribe', function (done) {
 
-    bus.subscribe('http.post.foo').withHttpUrl(baseUri + "/foobar");
+    bus.subscribe('http.post.foo').forwardToHttpUrl(baseUri + "/foobar");
 
     bus.subscribe('http.post.foobar', function (req) {
       return {
@@ -280,7 +280,7 @@ describe('API Gateway', function () {
 
   it('should forward PUT request via http to url specified by bus.subscribe', function (done) {
 
-    bus.subscribe('http.put.foo').withHttpUrl(baseUri + "/foobar");
+    bus.subscribe('http.put.foo').forwardToHttpUrl(baseUri + "/foobar");
 
     bus.subscribe('http.put.foobar', function (req) {
       return {
@@ -301,7 +301,7 @@ describe('API Gateway', function () {
 
   it('should forward DELETE request via http to url specified by bus.subscribe', function (done) {
 
-    bus.subscribe('http.delete.foo').withHttpUrl(baseUri + "/foobar");
+    bus.subscribe('http.delete.foo').forwardToHttpUrl(baseUri + "/foobar");
 
     bus.subscribe('http.delete.foobar', function (req) {
       return {
@@ -322,7 +322,7 @@ describe('API Gateway', function () {
     let server = http.createServer(app);
     server.listen(expressPort);
 
-    bus.subscribe('http.post.foo').withHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
+    bus.subscribe('http.post.foo').forwardToHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
 
     app.post("/foobar", (req, res) => {
       var form = new multiparty.Form();
@@ -360,7 +360,7 @@ describe('API Gateway', function () {
     let server = http.createServer(app);
     server.listen(expressPort);
 
-    bus.subscribe('http.post.foo').withHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
+    bus.subscribe('http.post.foo').forwardToHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
 
     app.post("/foobar", (req, res) => {
       let form = new multiparty.Form();
@@ -396,7 +396,7 @@ describe('API Gateway', function () {
     let server = http.createServer(app);
     server.listen(expressPort);
 
-    bus.subscribe('http.post.foo').withHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
+    bus.subscribe('http.post.foo').forwardToHttpUrl('http://127.0.0.1:' + expressPort + "/foobar");
 
     let checkForReqId;
     app.post("/foobar", (req, res) => {
