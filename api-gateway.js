@@ -192,6 +192,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
           .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
             if (!error) {
               var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+              body.headers = response.headers;
               resolve(body);
             } else {
               let errorObj = {
@@ -212,6 +213,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
       return new Promise(resolve => {
         request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
           if (!error) {
+              body.headers = response.headers;
             resolve(body);
           } else {
             let errorObj = {
@@ -226,6 +228,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function prepareResponse(resp) {
+
     log.debug('Got reply', resp.status);
     log.silly(resp);
 
