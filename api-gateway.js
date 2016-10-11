@@ -1,5 +1,4 @@
 const express = require('express');
-const logger = require('morgan');
 const fs = require('fs');
 const _ = require('lodash');
 const cookieParser = require('cookie-parser');
@@ -23,7 +22,6 @@ const dateStarted = new Date();
 
 var util = require('util');
 
-//app.use(logger('dev'));
 app.use(cors({
   origin: conf.allowOrigin
 }));
