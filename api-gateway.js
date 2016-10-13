@@ -140,9 +140,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     .then(checkProtocol);
 
   function optionsCall() {
-    return bus.request("options." + subject, {
-      reqId: reqId
-    }, ms(conf.busTimeout));
+    return bus.request("options." + subject, message, ms(conf.busTimeout));
   }
 
   function checkProtocol(resp) {
