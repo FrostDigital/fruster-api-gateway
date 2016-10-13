@@ -1,5 +1,4 @@
 const express = require('express');
-const logger = require('morgan');
 const fs = require('fs');
 const _ = require('lodash');
 const cookieParser = require('cookie-parser');
@@ -23,7 +22,6 @@ const dateStarted = new Date();
 
 var util = require('util');
 
-//app.use(logger('dev'));
 app.use(cors({
   origin: conf.allowOrigin
 }));
@@ -140,9 +138,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     .then(checkProtocol);
 
   function optionsCall() {
-    return bus.request("options." + subject, {
-      reqId: reqId
-    }, ms(conf.busTimeout));
+    return bus.request("options." + subject, message, ms(conf.busTimeout));
   }
 
   function checkProtocol(resp) {
@@ -192,6 +188,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
           .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
             if (!error) {
               var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+              body.headers = response.headers;
               resolve(body);
             } else {
               let errorObj = {
@@ -212,6 +209,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
       return new Promise(resolve => {
         request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
           if (!error) {
+              body.headers = response.headers;
             resolve(body);
           } else {
             let errorObj = {
@@ -226,6 +224,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function prepareResponse(resp) {
+
     log.debug('Got reply', resp.status);
     log.silly(resp);
 

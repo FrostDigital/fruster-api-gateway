@@ -1,8 +1,6 @@
-'use strict';
-
-var conf = require('./conf');
-var log = require('fruster-log');
-var apiGateway = require('./api-gateway');
+const conf = require('./conf');
+const log = require('fruster-log');
+const apiGateway = require('./api-gateway');
 
 apiGateway.start(conf.port, conf.bus)
 .then(function() {
