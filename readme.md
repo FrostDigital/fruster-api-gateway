@@ -24,7 +24,7 @@ During development `nodemon` is handy, it will watch and restart server when fil
 
 Configuration is set with environment variables. All config defaults to values that makes sense for development.
   
-    # Applications log level (error|warn|info|debug|silly)
+    # Applications log level (error|warn|info|debug|trace)
     LOG_LEVEL = 'debug'
 
     # Port API gateway listens on
