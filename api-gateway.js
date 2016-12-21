@@ -23,7 +23,8 @@ const dateStarted = new Date();
 var util = require('util');
 
 app.use(cors({
-  origin: conf.allowOrigin
+  origin: conf.allowOrigin,
+  credentials: true
 }));
 app.use(timeout(conf.httpTimeout));
 app.use(bodyParser.json({
