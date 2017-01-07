@@ -1,26 +1,26 @@
-const express = require('express');
-const fs = require('fs');
-const _ = require('lodash');
-const cookieParser = require('cookie-parser');
-const bodyParser = require('body-parser');
-const conf = require('./conf');
-const bus = require('fruster-bus');
-const cors = require('cors');
-const http = require('http');
-const timeout = require('connect-timeout');
-const log = require('fruster-log');
-const ms = require('ms');
-const utils = require('./utils');
-const uuid = require('uuid');
-const bearerToken = require('express-bearer-token');
-const request = require('request');
+const express = require("express");
+const fs = require("fs");
+const _ = require("lodash");
+const cookieParser = require("cookie-parser");
+const bodyParser = require("body-parser");
+const conf = require("./conf");
+const bus = require("fruster-bus");
+const cors = require("cors");
+const http = require("http");
+const timeout = require("connect-timeout");
+const log = require("fruster-log");
+const ms = require("ms");
+const utils = require("./utils");
+const uuid = require("uuid");
+const bearerToken = require("express-bearer-token");
+const request = require("request");
 
-const reqIdHeader = 'X-Fruster-Req-Id';
+const reqIdHeader = "X-Fruster-Req-Id";
 
 const app = express();
 const dateStarted = new Date();
 
-var util = require('util');
+var util = require("util");
 
 app.use(cors({
   origin: conf.allowOrigin,
@@ -36,19 +36,21 @@ app.use(bodyParser.urlencoded({
 app.use(cookieParser());
 app.use(bearerToken());
 
-app.get('/health', function (req, res) {
+app.get("/health", function (req, res) {
   res.json({
-    status: 'Alive since ' + dateStarted
+    status: "Alive since " + dateStarted
   });
 });
 
 app.use(function (httpReq, httpRes, next) {
   const reqId = uuid.v4();
-  log.debug(httpReq.method, httpReq.path, reqId);
+  const reqStartTime = Date.now();
+
+  logRequest(reqId, httpReq);
 
   decodeToken(httpReq, reqId)
-    .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken))
-    .catch(err => handleError(err, httpRes, reqId));
+    .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken, reqStartTime))
+    .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
 app.use(function (err, req, res, next) {
@@ -69,8 +71,8 @@ app.use(function (err, req, res, next) {
   }
 });
 
-function handleError(err, httpRes, reqId) {
-  log.debug('Got error', err.status, err.error, "for", reqId);
+function handleError(err, httpRes, reqId, reqStartTime) {
+  logError(reqId, err, reqStartTime);
 
   /*
    * Translates 408 timeout to 404 since timeout indicates that no one 
@@ -104,13 +106,13 @@ function decodeToken(httpReq, reqId) {
     };
 
     return bus
-      .request('auth-service.decode-token', decodeReq)
+      .request("auth-service.decode-token", decodeReq)
       .then(resp => resp.data)
       .catch(err => {
         if (err.status == 401 || err.status == 403) {
-          log.debug('Failed to decode token (got error ' + err.code + ') will expire cookie if present');
+          log.debug("Failed to decode token (got error " + err.code + ") will expire cookie if present");
           err.headers = err.headers ||  {};
-          err.headers['Set-Cookie'] = 'jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          err.headers["Set-Cookie"] = "jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         }
         throw err;
       });
@@ -131,7 +133,7 @@ function getToken(httpReq) {
   return token;
 }
 
-function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
+function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken, reqStartTime) {
   let subject = utils.createSubject(httpReq);
   let message = utils.createRequest(httpReq, reqId, decodedToken);
 
@@ -142,9 +144,8 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
     return bus.request("options." + subject, message, ms(conf.busTimeout));
   }
 
-  function checkProtocol(resp) {
-    log.debug("Request", reqId, "will use", resp.data.protocol, "protocol");
-    log.silly(resp);
+  function checkProtocol(resp) { 
+    log.silly(`[${reqId}] Using protocol ${resp.data.protocol}`);
 
     switch (resp.data.protocol) {
     case "NATS":
@@ -156,14 +157,9 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function busCall() {
-    log.debug('Sending to subject', subject);
-    log.silly(message);
-
     return bus.request(subject, message, ms(conf.busTimeout))
-      .then((busRes) => {
-        log.debug('Got reply', busRes.status);
-        log.silly(busRes.data);
-
+      .then((busRes) => {  
+        logResponse(reqId, busRes, reqStartTime);
         setRequestId(reqId, busRes);
 
         httpRes
@@ -174,10 +170,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
       });
   }
 
-  function httpCall(httpOptions) {
-    log.debug(httpReq.method.toLowerCase() + ' to url ' + httpOptions.url);
-    log.silly(message);
-
+  function httpCall(httpOptions) {    
     if (httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart")) {
       let requestOptions = {
         uri: httpOptions.url
@@ -204,7 +197,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
       let requestOptions = {
         uri: httpOptions.url,
         json: message,
-        'content-type': message.headers['content-type']
+        "content-type": message.headers["content-type"]
       };
 
       return new Promise(resolve => {
@@ -225,10 +218,7 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
   }
 
   function prepareResponse(resp) {
-
-    log.debug('Got reply', resp.status);
-    log.silly(resp);
-
+    logResponse(reqId, resp, reqStartTime);
     setRequestId(reqId, resp);
 
     httpRes
@@ -242,9 +232,44 @@ function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
 
 function setRequestId(reqId, resp) {
   if (resp.reqId != reqId) {
-    log.warn('Request id in bus response (' + resp.reqId + ') does not match the one set by API gateway (' + reqId + ')');
+    log.warn("Request id in bus response (" + resp.reqId + ") does not match the one set by API gateway (" + reqId + ")");
     resp.reqId = reqId;
   }
+}
+
+function logResponse(reqId, resp, startTime) {
+  const now = Date.now();
+  log.info(`[${reqId}] ${resp.status} (${now - startTime}ms)`);
+  
+  if(isTrace()) {
+    log.silly(resp);
+  }
+}
+
+function logError(reqId, err, startTime) {  
+  const now = Date.now();
+
+  let stringifiedError;
+
+  try {
+    stringifiedError = JSON.stringify(err.error);
+  } catch(e) {
+    stringifiedError = err.error;
+  }
+
+  if(err.status >= 500 || err.status == 408) { 
+    log.error(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
+  } else {
+    log.info(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
+  }
+}
+
+function logRequest(reqId, req) {
+  log.info(`[${reqId}] ${req.method} ${req.path}`);      
+}
+
+function isTrace() {  
+  return log.transports.console.level == "trace" || log.transports.console.level == "silly" ;
 }
 
 module.exports = {
@@ -253,8 +278,8 @@ module.exports = {
     var startHttpServer = new Promise(function (resolve, reject) {
       http.createServer(app)
         .listen(httpServerPort)
-        .on('error', reject)
-        .on('listening', resolve);
+        .on("error", reject)
+        .on("listening", resolve);
     });
 
     var connectToBus = function () {
