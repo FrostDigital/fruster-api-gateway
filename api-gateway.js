@@ -71,8 +71,8 @@ app.use(function (err, req, res, next) {
   }
 });
 
-function handleError(err, httpRes, reqId) {
-  logError(reqId, err);
+function handleError(err, httpRes, reqId, reqStartTime) {
+  logError(reqId, err, reqStartTime);
 
   /*
    * Translates 408 timeout to 404 since timeout indicates that no one 
@@ -238,29 +238,38 @@ function setRequestId(reqId, resp) {
 }
 
 function logResponse(reqId, resp, startTime) {
-  if(isDebug()) {
-    const now = Date.now();
-    log.debug(`[${reqId}] ${resp.status} (${now - startTime}ms)`);
+  const now = Date.now();
+  log.info(`[${reqId}] ${resp.status} (${now - startTime}ms)`);
+  
+  if(isTrace()) {
     log.silly(resp);
   }
 }
 
-function logError(reqId, err) {  
+function logError(reqId, err, startTime) {  
+  const now = Date.now();
+
+  let stringifiedError;
+
+  try {
+    stringifiedError = JSON.stringify(err.error);
+  } catch(e) {
+    stringifiedError = err.error;
+  }
+
   if(err.status >= 500 || err.status == 408) { 
-    log.error(`[${reqId}] ${err.status} ${JSON.stringify(err.error)}`);
-  } else if(isDebug()) {
-    log.debug(`[${reqId}] ${err.status} ${JSON.stringify(err.error)}`);
+    log.error(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
+  } else {
+    log.info(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
   }
 }
 
 function logRequest(reqId, req) {
-  if(isDebug()) {
-    log.debug(`[${reqId}] ${req.method} ${req.path}`);    
-  }
+  log.info(`[${reqId}] ${req.method} ${req.path}`);      
 }
 
-function isDebug() {  
-  return log.transports.console.level == "debug";
+function isTrace() {  
+  return log.transports.console.level == "trace" || log.transports.console.level == "silly" ;
 }
 
 module.exports = {
