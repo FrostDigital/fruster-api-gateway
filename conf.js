@@ -4,7 +4,7 @@ module.exports = {
   port: process.env.PORT || 3000,
 
   // Allow origin for CORS
-  // Examples: `*`, `http://www.example.com`,  `['http://www.example.com'. 'http://localhost:9000']`
+  // Examples: `*`, `http://www.example.com`,  `http://www.example.com,http://localhost:9000`
   allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || '*',
 
   // If stack traces should be leaked error responses
