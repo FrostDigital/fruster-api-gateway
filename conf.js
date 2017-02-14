@@ -5,7 +5,7 @@ module.exports = {
 
   // Allow origin for CORS
   // Examples: `*`, `http://www.example.com`,  `['http://www.example.com'. 'http://localhost:9000']`
-  allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || '*',
+  allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || 'http://localhost:4200',
 
   // If stack traces should be leaked error responses
   printStacktrace: parseBool(process.env.PRINT_STACKTRACE, true),
@@ -24,7 +24,17 @@ module.exports = {
 
   unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
 
-  authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt'
+  authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt',
+
+  // Port Web socket listens on
+  websocketPort: process.env.WEBSOCKET_PORT || 4000,
+
+  // User scopes required to connect to the fruster web bus
+  webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
+
+  // Subject for web sockets
+  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "out.user.:userId"
+
 };
 
 function parseBool(str, defaultVal) {

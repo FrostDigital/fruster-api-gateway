@@ -24,7 +24,9 @@
     "node-http-client": "0.0.0",
     "npm": "^3.10.6",
     "request": "^2.75.0",
-    "uuid": "^2.0.2"
+    "uuid": "^2.0.2",
+    "ws": "^2.0.3",
+    "nats": "^0.6.4"
   },
   "devDependencies": {
     "multiparty": "^4.1.2",
