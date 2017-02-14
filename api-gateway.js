@@ -1,29 +1,30 @@
-const express = require('express');
-const fs = require('fs');
-const _ = require('lodash');
-const cookieParser = require('cookie-parser');
-const bodyParser = require('body-parser');
-const conf = require('./conf');
-const bus = require('fruster-bus');
-const cors = require('cors');
-const http = require('http');
-const timeout = require('connect-timeout');
-const log = require('fruster-log');
-const ms = require('ms');
-const utils = require('./utils');
-const uuid = require('uuid');
-const bearerToken = require('express-bearer-token');
-const request = require('request');
+const express = require("express");
+const fs = require("fs");
+const _ = require("lodash");
+const cookieParser = require("cookie-parser");
+const bodyParser = require("body-parser");
+const conf = require("./conf");
+const bus = require("fruster-bus");
+const cors = require("cors");
+const http = require("http");
+const timeout = require("connect-timeout");
+const log = require("fruster-log");
+const ms = require("ms");
+const utils = require("./utils");
+const uuid = require("uuid");
+const bearerToken = require("express-bearer-token");
+const request = require("request");
 
-const reqIdHeader = 'X-Fruster-Req-Id';
+const reqIdHeader = "X-Fruster-Req-Id";
 
 const app = express();
 const dateStarted = new Date();
 
-var util = require('util');
+var util = require("util");
 
 app.use(cors({
-    origin: conf.allowOrigin
+    origin: conf.allowOrigin,
+    credentials: true
 }));
 app.use(timeout(conf.httpTimeout));
 app.use(bodyParser.json({
@@ -35,19 +36,22 @@ app.use(bodyParser.urlencoded({
 app.use(cookieParser());
 app.use(bearerToken());
 
-app.get('/health', function (req, res) {
+
+app.get("/health", function (req, res) {
     res.json({
-        status: 'Alive since ' + dateStarted
+        status: "Alive since " + dateStarted
     });
 });
 
 app.use(function (httpReq, httpRes, next) {
     const reqId = uuid.v4();
-    log.debug(httpReq.method, httpReq.path, reqId);
+    const reqStartTime = Date.now();
+
+    logRequest(reqId, httpReq);
 
     decodeToken(httpReq, reqId)
-        .then(decodedToken => busRequest(httpReq, httpRes, reqId, decodedToken))
-        .catch(err => handleError(err, httpRes, reqId));
+        .then(decodedToken => busRequest(httpReq, httpRes, reqId, decodedToken, reqStartTime))
+        .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
 app.use(function (err, req, res, next) {
@@ -68,8 +72,8 @@ app.use(function (err, req, res, next) {
     }
 });
 
-function handleError(err, httpRes, reqId) {
-    log.debug('Got error', err.status, err.error, "for", reqId);
+function handleError(err, httpRes, reqId, reqStartTime) {
+    logError(reqId, err, reqStartTime);
 
     /*
      * Translates 408 timeout to 404 since timeout indicates that no one 
@@ -143,7 +147,6 @@ function busRequest(httpReq, httpRes, reqId, decodedToken) {
             log.silly(busRes.data);
 
             setRequestId(reqId, busRes);
-
             httpRes
                 .status(busRes.status)
                 .set(busRes.headers)
@@ -157,6 +160,41 @@ function setRequestId(reqId, resp) {
         log.warn('Request id in bus response (' + resp.reqId + ') does not match the one set by API gateway (' + reqId + ')');
         resp.reqId = reqId;
     }
+}
+
+function logResponse(reqId, resp, startTime) {
+    const now = Date.now();
+    log.info(`[${reqId}] ${resp.status} (${now - startTime}ms)`);
+
+    if (isTrace()) {
+        log.silly(resp);
+    }
+}
+
+function logError(reqId, err, startTime) {
+    const now = Date.now();
+
+    let stringifiedError;
+
+    try {
+        stringifiedError = JSON.stringify(err.error);
+    } catch (e) {
+        stringifiedError = err.error;
+    }
+
+    if (err.status >= 500 ||  err.status == 408) {
+        log.error(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
+    } else {
+        log.info(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
+    }
+}
+
+function logRequest(reqId, req) {
+    log.info(`[${reqId}] ${req.method} ${req.path}`);
+}
+
+function isTrace() {
+    return log.transports.console.level == "trace" ||  log.transports.console.level == "silly";
 }
 
 module.exports = {
