@@ -249,7 +249,6 @@ describe("API Gateway", function () {
     it("web bus - should be possible to connect to web bus", done => {
         let messageToSend = {
             reqId: uuid.v4(),
-            action: "HELLO_THERE",
             data: {
                 some: "data"
             }
@@ -276,7 +275,7 @@ describe("API Gateway", function () {
 
             expect(message.reqId).toBe(messageToSend.reqId);
             expect(message.data.some).toBe(messageToSend.data.some);
-            expect(message.action).toBe(messageToSend.action);
+            expect(message.subject).toBeDefined("ws.hello-there-id.hello");
 
             done();
         });
@@ -286,21 +285,19 @@ describe("API Gateway", function () {
         });
 
         setTimeout(() => {
-            bus.request("out.user.hello-there-id", messageToSend);
+            bus.request("ws.hello-there-id.hello", messageToSend);
         }, 100);
     });
 
     it("web bus - should only get messages addressed to user's id", done => {
         let messageToReceive = {
                 reqId: uuid.v4(),
-                action: "HELLO_THERE",
                 data: {
                     some: "data"
                 }
             },
             messageNotToReceive = {
                 reqId: uuid.v4(),
-                action: "HELLO_NOT_THERE",
                 data: {
                     some: "data2"
                 }
@@ -331,8 +328,8 @@ describe("API Gateway", function () {
             expect(message.data.some).not.toBe(messageNotToReceive.data.some);
             expect(message.data.some).toBe(messageToReceive.data.some);
 
-            expect(message.action).not.toBe(messageNotToReceive.action);
-            expect(message.action).toBe(messageToReceive.action);
+            expect(message.subject).not.toBe("ws.hello2-there-id");
+            expect(message.subject).toBe("ws.hello-there-id");
 
             done();
         });
@@ -342,8 +339,8 @@ describe("API Gateway", function () {
         });
 
         setTimeout(() => {
-            bus.request("out.user.hello2-there-id", messageNotToReceive)
-                .then(() => bus.request("out.user.hello-there-id", messageToReceive));
+            bus.request("ws.hello2-there-id", messageNotToReceive)
+                .then(() => bus.request("ws.hello-there-id", messageToReceive));
         }, 100);
     });
 
@@ -375,6 +372,50 @@ describe("API Gateway", function () {
         ws.on("close", () => {
             done();
         });
+    });
+
+    it("web bus - should allow broadcasts", done => {
+        let message = {
+            reqId: uuid.v4(),
+            data: {
+                some: "data"
+            }
+        };
+
+        bus.subscribe("auth-service.decode-token", function (req) {
+            return {
+                status: 200,
+                data: {
+                    id: "hello-there-id",
+                    scopes: conf.webSocketPermissionScope
+                }
+            };
+        });
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: {
+                cookie: "jwt=hello"
+            }
+        });
+
+        ws.on("message", function (json) {
+            let message = JSON.parse(json);
+
+            expect(message.subject).toBe("ws.hello-there-id.new-message");
+            expect(message.reqId).toBe(message.reqId);
+            expect(message.data.some).toBe(message.data.some);
+            expect(message.subject).toBe(message.subject);
+
+            done();
+        });
+
+        ws.on("close", () => {
+            done.fail();
+        });
+
+        setTimeout(() => {
+            bus.request("ws.*.new-message", message);
+        }, 100);
     });
 
     function ws(path, headers, cb) {
