@@ -328,8 +328,8 @@ describe("API Gateway", function () {
             expect(message.data.some).not.toBe(messageNotToReceive.data.some);
             expect(message.data.some).toBe(messageToReceive.data.some);
 
-            expect(message.subject).not.toBe("ws.hello2-there-id");
-            expect(message.subject).toBe("ws.hello-there-id");
+            expect(message.subject).not.toBe("ws.hello2-there-id.hello");
+            expect(message.subject).toBe("ws.hello-there-id.hello");
 
             done();
         });
@@ -339,8 +339,8 @@ describe("API Gateway", function () {
         });
 
         setTimeout(() => {
-            bus.request("ws.hello2-there-id", messageNotToReceive)
-                .then(() => bus.request("ws.hello-there-id", messageToReceive));
+            bus.request("ws.hello2-there-id.hello", messageNotToReceive)
+                .then(() => bus.request("ws.hello-there-id.hello", messageToReceive));
         }, 100);
     });
 
@@ -417,13 +417,6 @@ describe("API Gateway", function () {
             bus.request("ws.*.new-message", message);
         }, 100);
     });
-
-    function ws(path, headers, cb) {
-        if (typeof (headers) === "function") {
-            cb = headers;
-        }
-        doRequest("WS", path, headers, true, cb);
-    }
 
     function get(path, headers, cb) {
         if (typeof (headers) === "function") {

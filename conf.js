@@ -30,7 +30,7 @@ module.exports = {
   webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
 
   // Subject for web sockets
-  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.>"
+  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.*.>"
 
 };
 
