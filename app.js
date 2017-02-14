@@ -4,7 +4,7 @@ const apiGateway = require('./api-gateway');
 const FrusterWebBus = require('./lib/FrusterWebBus');
 
 apiGateway.start(conf.port, conf.bus)
-	.then(() => new FrusterWebBus())
+	.then(server => new FrusterWebBus(server))
 	.then(function ()  {
 		log.info('HTTP server started (listening on %s) and connected bus (%s)', conf.port, conf.bus);
 	})

@@ -46,7 +46,7 @@ app.use(function (httpReq, httpRes, next) {
     log.debug(httpReq.method, httpReq.path, reqId);
 
     decodeToken(httpReq, reqId)
-        .then(decodedToken => proxyToBusRequest(httpReq, httpRes, reqId, decodedToken))
+        .then(decodedToken => busRequest(httpReq, httpRes, reqId, decodedToken))
         .catch(err => handleError(err, httpRes, reqId));
 });
 
@@ -64,7 +64,7 @@ app.use(function (err, req, res, next) {
     res.json(json);
 
     if (res.status === 500) {
-        console.error(err.stack);
+        log.error(err.stack);
     }
 });
 
@@ -130,112 +130,26 @@ function getToken(httpReq) {
     return token;
 }
 
-function proxyToBusRequest(httpReq, httpRes, reqId, decodedToken) {
+function busRequest(httpReq, httpRes, reqId, decodedToken) {
     let subject = utils.createSubject(httpReq);
     let message = utils.createRequest(httpReq, reqId, decodedToken);
 
-    return optionsCall()
-        .then(checkProtocol);
+    log.debug('Sending to subject', subject);
+    log.silly(message);
 
-    function optionsCall() {
-        return bus.request("options." + subject, message, ms(conf.busTimeout));
-    }
+    return bus.request(subject, message, ms(conf.busTimeout))
+        .then((busRes) => {
+            log.debug('Got reply', busRes.status);
+            log.silly(busRes.data);
 
-    function checkProtocol(resp) {
-        log.debug("Request", reqId, "will use", resp.data.protocol, "protocol");
-        log.silly(resp);
+            setRequestId(reqId, busRes);
 
-        switch (resp.data.protocol) {
-        case "NATS":
-            return busCall();
-        case "HTTP":
-            return httpCall(resp.data.http)
-                .then(prepareResponse);
-        }
-    }
-
-    function busCall() {
-        log.debug('Sending to subject', subject);
-        log.silly(message);
-
-        return bus.request(subject, message, ms(conf.busTimeout))
-            .then((busRes) => {
-                log.debug('Got reply', busRes.status);
-                log.silly(busRes.data);
-
-                setRequestId(reqId, busRes);
-
-                httpRes
-                    .status(busRes.status)
-                    .set(busRes.headers)
-                    .header(reqIdHeader, reqId)
-                    .json(conf.unwrapMessageData ? busRes.data : utils.sanitizeResponse(busRes));
-            });
-    }
-
-    function httpCall(httpOptions) {
-        log.debug(httpReq.method.toLowerCase() + ' to url ' + httpOptions.url);
-        log.silly(message);
-
-        if (httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart")) {
-            let requestOptions = {
-                uri: httpOptions.url
-            };
-            httpReq.headers.data = JSON.stringify(message);
-
-            return new Promise(resolve => {
-                httpReq
-                    .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
-                        if (!error) {
-                            var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
-                            body.headers = response.headers;
-                            resolve(body);
-                        } else {
-                            let errorObj = {
-                                status: 500,
-                                error: error
-                            };
-                            handleError(errorObj, httpRes, message.reqId);
-                        }
-                    }));
-            });
-        } else {
-            let requestOptions = {
-                uri: httpOptions.url,
-                json: message,
-                'content-type': message.headers['content-type']
-            };
-
-            return new Promise(resolve => {
-                request[httpReq.method.toLowerCase()](requestOptions, (error, response, body) => {
-                    if (!error) {
-                        body.headers = response.headers;
-                        resolve(body);
-                    } else {
-                        let errorObj = {
-                            status: 500,
-                            error: error
-                        };
-                        handleError(errorObj, httpRes, message.reqId);
-                    }
-                });
-            });
-        }
-    }
-
-    function prepareResponse(resp) {
-        log.debug('Got reply', resp.status);
-        log.silly(resp);
-
-        setRequestId(reqId, resp);
-
-        httpRes
-            .status(resp.status)
-            .set(resp.headers)
-            .header(reqIdHeader, reqId)
-            .header("status", resp.status)
-            .json(conf.unwrapMessageData ? resp.data : utils.sanitizeResponse(resp));
-    }
+            httpRes
+                .status(busRes.status)
+                .set(busRes.headers)
+                .header(reqIdHeader, reqId)
+                .json(conf.unwrapMessageData ? busRes.data : utils.sanitizeResponse(busRes));
+        });
 }
 
 function setRequestId(reqId, resp) {
@@ -249,17 +163,19 @@ module.exports = {
     start: function (httpServerPort, busAddress) {
 
         var startHttpServer = new Promise(function (resolve, reject) {
-            http.createServer(app)
-                .listen(httpServerPort)
-                .on('error', reject)
-                .on('listening', resolve);
+            let server = http.createServer(app)
+                .listen(httpServerPort);
+            server.on('error', reject);
+            server.on('listening', resolve);
+
+            return resolve(server);
         });
 
         var connectToBus = function () {
             return bus.connect(busAddress);
         };
 
-        return startHttpServer.then(connectToBus);
+        return startHttpServer.then(server => connectToBus().then(() => server));
     },
 
     decodeToken: decodeToken

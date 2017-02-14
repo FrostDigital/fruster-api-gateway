@@ -57,3 +57,8 @@ Configuration is set with environment variables. All config defaults to values t
     # same JSON structure as internal bus messages should be kept    
     UNWRAP_MESSAGE_DATA = false
 
+   # User scopes required to connect to the fruster web bus
+   WEBSOCKET_PERMISSION_SCOPES = ["websocket.connect.id"],
+
+   # Subject for web sockets
+   WEBSOCKET_SUBJECT = "out.user.:userId"

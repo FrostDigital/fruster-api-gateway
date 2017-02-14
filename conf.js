@@ -26,9 +26,6 @@ module.exports = {
 
   authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt',
 
-  // Port Web socket listens on
-  websocketPort: process.env.WEBSOCKET_PORT || 4000,
-
   // User scopes required to connect to the fruster web bus
   webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
 
