@@ -149,10 +149,10 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
     // api gateway is able to stream the multipart body to
     // its internal receiving service.
 
-    // Otherwise plain bus request are used, but note that 
+    // Otherwise plain bus request is used, but note that 
     // depending on what the recieving service wants for protocol
-    // the resulting request mauy still be done via HTTP. However, this
-    // happend under the hood in fruster-bus-js and hence is transparent for
+    // the resulting request may still be done via HTTP. However, this
+    // happens under the hood in fruster-bus-js and hence is transparent for
     // the api gateway.
 
 	if(isMultipartReq) {
