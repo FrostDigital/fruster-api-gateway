@@ -137,8 +137,6 @@ function getToken(httpReq) {
 }
 
 function sendInternalRequest(httpReq, reqId, decodedToken) {
-    const isMultipartReq = isMultipart(httpReq);
-	
 	let subject = utils.createSubject(httpReq);
     let message = utils.createRequest(httpReq, reqId, decodedToken);
 
@@ -155,7 +153,7 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
     // happens under the hood in fruster-bus-js and hence is transparent for
     // the api gateway.
 
-	if(isMultipartReq) {
+	if(isMultipart(httpReq)) {
 		return sendInternalMultipartRequest(subject, message, httpReq);
 	} else {
 		return sendInternalBusRequest(subject, message); 		
