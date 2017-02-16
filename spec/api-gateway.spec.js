@@ -492,6 +492,40 @@ describe("API Gateway", function () {
         });
     });
 
+    it("should get error when multipart upload failed", (done) => {
+        let expressPort = Math.floor(Math.random() * 6000 + 3000);
+        let app = express();
+        let server = http.createServer(app);
+        server.listen(expressPort);
+
+        bus.subscribe("http.post.foo").forwardToHttp("http://127.0.0.1:" + expressPort + "/foobar");
+
+        app.post("/foobar", (req, res) => {            
+            res.send({
+                reqId: "reqId",
+                status: 500,
+                error: {
+                    id: "8e97186c-4165-4d75-8293-92adead403db",
+                    title: "Upload totally failed"
+                }
+            });
+        });
+
+        doFormDataRequest('/foo', function(error, response, respBody) {
+            let body = JSON.parse(respBody);
+            
+            expect(response.statusCode).toBe(500);
+            expect(body.status).toBe(500);
+            expect(body.error.title).toBe("Upload totally failed");
+            expect(body.error.id).toBeDefined();
+
+            server.close();
+
+            done();
+        });
+    });
+
+
     function get(path, headers, cb) {
         if (typeof (headers) === "function") {
             cb = headers;
