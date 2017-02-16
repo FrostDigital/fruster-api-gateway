@@ -50,7 +50,8 @@ app.use(function (httpReq, httpRes, next) {
     logRequest(reqId, httpReq);
 
     decodeToken(httpReq, reqId)
-        .then(decodedToken => busRequest(httpReq, httpRes, reqId, decodedToken, reqStartTime))
+        .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
+		.then(internalRes => sendHttpReponse(reqId, internalRes, httpRes))
         .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
@@ -122,6 +123,7 @@ function decodeToken(httpReq, reqId) {
     return Promise.resolve({});
 }
 
+
 function getToken(httpReq) {
     var token;
 
@@ -134,25 +136,76 @@ function getToken(httpReq) {
     return token;
 }
 
-function busRequest(httpReq, httpRes, reqId, decodedToken) {
-    let subject = utils.createSubject(httpReq);
+function sendInternalRequest(httpReq, reqId, decodedToken) {
+    const isMultipartReq = isMultipart(httpReq);
+	
+	let subject = utils.createSubject(httpReq);
     let message = utils.createRequest(httpReq, reqId, decodedToken);
 
     log.debug('Sending to subject', subject);
     log.silly(message);
 
-    return bus.request(subject, message, ms(conf.busTimeout))
-        .then((busRes) => {
-            log.debug('Got reply', busRes.status);
-            log.silly(busRes.data);
+    // Multipart requests are dealt with manually so that
+    // api gateway is able to stream the multipart body to
+    // its internal receiving service.
 
-            setRequestId(reqId, busRes);
-            httpRes
-                .status(busRes.status)
-                .set(busRes.headers)
-                .header(reqIdHeader, reqId)
-                .json(conf.unwrapMessageData ? busRes.data : utils.sanitizeResponse(busRes));
-        });
+    // Otherwise plain bus request are used, but note that 
+    // depending on what the recieving service wants for protocol
+    // the resulting request mauy still be done via HTTP. However, this
+    // happend under the hood in fruster-bus-js and hence is transparent for
+    // the api gateway.
+
+	if(isMultipartReq) {
+		return sendInternalMultipartRequest(subject, message, httpReq);
+	} else {
+		return sendInternalBusRequest(subject, message); 		
+	}
+}
+
+function sendInternalMultipartRequest(subject, message, httpReq) {
+	return bus.request(subject, message, ms(conf.busTimeout), true)
+		.then((optionsRes) => {
+			const httpOptions = optionsRes.data.http;
+
+			let requestOptions = {
+				uri: httpOptions.url
+			};
+
+			httpReq.headers.data = JSON.stringify(message);
+
+			return new Promise(resolve => {
+				httpReq
+					.pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
+						if (!error) {
+							var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+							body.headers = response.headers;
+							resolve(body);
+						} else {
+							let errorObj = {
+								status: 500,
+								error: error
+							};
+							reject(errorObj);							
+						}
+					}));
+			});
+		});
+} 
+
+function sendInternalBusRequest(subject, message) {
+    return bus.request(subject, message, ms(conf.busTimeout));
+}
+
+function sendHttpReponse(reqId, internalRes, httpRes) {
+    log.silly(internalRes.data);
+
+    setRequestId(reqId, internalRes);
+        
+    httpRes
+        .status(internalRes.status)
+        .set(internalRes.headers)
+        .header(reqIdHeader, reqId)
+        .json(conf.unwrapMessageData ? internalRes.data : utils.sanitizeResponse(internalRes));
 }
 
 function setRequestId(reqId, resp) {
@@ -195,6 +248,10 @@ function logRequest(reqId, req) {
 
 function isTrace() {
     return log.transports.console.level == "trace" ||  log.transports.console.level == "silly";
+}
+
+function isMultipart(httpReq) {
+    return httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart");
 }
 
 module.exports = {

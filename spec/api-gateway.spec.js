@@ -418,6 +418,80 @@ describe("API Gateway", function () {
         }, 100);
     });
 
+    it("should forward POST request with multipart via http to url specified by bus.subscribe", (done) => {
+        let expressPort = Math.floor(Math.random() * 6000 + 3000);
+        let app = express();
+        let server = http.createServer(app);
+        server.listen(expressPort);
+
+        bus.subscribe("http.post.foo").forwardToHttp("http://127.0.0.1:" + expressPort + "/foobar");
+
+        app.post("/foobar", (req, res) => {            
+            let form = new multiparty.Form();
+
+            form.parse(req, function(err, fields, files) {
+                expect(files.file[0].fieldName).toBe("file");
+                expect(files.file[0].originalFilename).toBe("a-large-file.jpg");
+                expect(files.file[0].size).toBe(86994);
+
+                fs.unlink(files.file[0].path);
+
+                console.log("sending");
+
+                res.send({
+                    reqId: JSON.parse(req.headers.data).reqId,
+                    status: 200
+                });
+            });
+        });
+
+        doMultipartRequest("/foo", (error, response, respBody) => {
+            let body = JSON.parse(respBody);
+
+            expect(body.status).toBe(200);
+            expect(body.reqId).toBeDefined();
+
+            server.close();
+
+            done();
+        });
+    });
+
+    it("should send additional data in headers when forwarding POST request with multipart/form-data via http to url specified by bus.subscribe", (done) => {
+        let expressPort = Math.floor(Math.random() * 6000 + 3000);
+        let app = express();
+        let server = http.createServer(app);
+        server.listen(expressPort);
+
+        bus.subscribe("http.post.foo").forwardToHttp("http://127.0.0.1:" + expressPort + "/foobar");
+
+        let checkForReqId;
+        app.post("/foobar", (req, res) => {
+            let additionaldata = JSON.parse(req.headers.data);
+
+            expect(additionaldata.reqId).toBeDefined();
+            expect(additionaldata.path).toBe("/foo");
+            expect(additionaldata.query.hej).toBe("1");
+
+            checkForReqId = additionaldata.reqId;
+
+            res.send({
+                reqId: additionaldata.reqId,
+                status: 200
+            });
+        });
+
+        doFormDataRequest('/foo?hej=1', function(error, response, respBody) {
+            let body = JSON.parse(respBody);
+            expect(body.status).toBe(200);
+            expect(body.reqId).toBe(checkForReqId);
+
+            server.close();
+
+            done();
+        });
+    });
+
     function get(path, headers, cb) {
         if (typeof (headers) === "function") {
             cb = headers;
