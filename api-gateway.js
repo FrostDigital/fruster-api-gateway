@@ -51,7 +51,7 @@ app.use(function (httpReq, httpRes, next) {
 
     decodeToken(httpReq, reqId)
         .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
-		.then(internalRes => sendHttpReponse(reqId, internalRes, httpRes))
+        .then(internalRes => sendHttpReponse(reqId, internalRes, httpRes))
         .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
@@ -137,7 +137,7 @@ function getToken(httpReq) {
 }
 
 function sendInternalRequest(httpReq, reqId, decodedToken) {
-	let subject = utils.createSubject(httpReq);
+    let subject = utils.createSubject(httpReq);
     let message = utils.createRequest(httpReq, reqId, decodedToken);
 
     log.debug('Sending to subject', subject);
@@ -153,42 +153,42 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
     // happens under the hood in fruster-bus-js and hence is transparent for
     // the api gateway.
 
-	if(isMultipart(httpReq)) {
-		return sendInternalMultipartRequest(subject, message, httpReq);
-	} else {
-		return sendInternalBusRequest(subject, message); 		
-	}
+    if (isMultipart(httpReq)) {
+        return sendInternalMultipartRequest(subject, message, httpReq);
+    } else {
+        return sendInternalBusRequest(subject, message);
+    }
 }
 
 function sendInternalMultipartRequest(subject, message, httpReq) {
-	return bus.request(subject, message, ms(conf.busTimeout), true)
-		.then((optionsRes) => {
-			const httpOptions = optionsRes.data.http;
+    return bus.request(subject, message, ms(conf.busTimeout), true)
+        .then((optionsRes) => {
+            const httpOptions = optionsRes.data.http;
 
-			let requestOptions = {
-				uri: httpOptions.url
-			};
+            let requestOptions = {
+                uri: httpOptions.url
+            };
 
-			httpReq.headers.data = JSON.stringify(message);
+            httpReq.headers.data = JSON.stringify(message);
 
-			return new Promise(resolve => {
-				httpReq
-					.pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
-						if (!error) {
-							var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
-							body.headers = response.headers;
-							resolve(body);
-						} else {
-							let errorObj = {
-								status: 500,
-								error: error
-							};
-							reject(errorObj);							
-						}
-					}));
-			});
-		});
-} 
+            return new Promise(resolve => {
+                httpReq
+                    .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
+                        if (!error) {
+                            var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+                            body.headers = response.headers;
+                            resolve(body);
+                        } else {
+                            let errorObj = {
+                                status: 500,
+                                error: error
+                            };
+                            reject(errorObj);
+                        }
+                    }));
+            });
+        });
+}
 
 function sendInternalBusRequest(subject, message) {
     return bus.request(subject, message, ms(conf.busTimeout));
@@ -198,7 +198,7 @@ function sendHttpReponse(reqId, internalRes, httpRes) {
     log.silly(internalRes.data);
 
     setRequestId(reqId, internalRes);
-        
+
     httpRes
         .status(internalRes.status)
         .set(internalRes.headers)
@@ -241,6 +241,9 @@ function logError(reqId, err, startTime) {
 }
 
 function logRequest(reqId, req) {
+    if (isTrace()) {
+        log.silly(req);
+    }
     log.info(`[${reqId}] ${req.method} ${req.path}`);
 }
 
