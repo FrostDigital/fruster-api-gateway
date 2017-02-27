@@ -246,6 +246,25 @@ describe("API Gateway", function () {
         });
     });
 
+    it("should be possible to send content type containing json", function (done) {
+        bus.subscribe("http.post.content-type-json", function (req) {
+            expect(req.data.hello).toBe(1337);
+            return {
+                status: 200
+            };
+        });
+
+        post("/content-type-json", {
+            "content-type": "application/vnd.contentful.management.v1+json"
+        }, {
+            hello: 1337
+        }, (error, response, body) => {
+            expect(response.statusCode).toBe(200);
+            expect(body.reqId).toBeDefined();
+            done();
+        });
+    });
+
     it("web bus - should be possible to connect to web bus", done => {
         let messageToSend = {
             reqId: uuid.v4(),
@@ -426,10 +445,10 @@ describe("API Gateway", function () {
 
         bus.subscribe("http.post.foo").forwardToHttp("http://127.0.0.1:" + expressPort + "/foobar");
 
-        app.post("/foobar", (req, res) => {            
+        app.post("/foobar", (req, res) => {
             let form = new multiparty.Form();
 
-            form.parse(req, function(err, fields, files) {
+            form.parse(req, function (err, fields, files) {
                 expect(files.file[0].fieldName).toBe("file");
                 expect(files.file[0].originalFilename).toBe("a-large-file.jpg");
                 expect(files.file[0].size).toBe(86994);
@@ -481,7 +500,7 @@ describe("API Gateway", function () {
             });
         });
 
-        doFormDataRequest('/foo?hej=1', function(error, response, respBody) {
+        doFormDataRequest('/foo?hej=1', function (error, response, respBody) {
             let body = JSON.parse(respBody);
             expect(body.status).toBe(200);
             expect(body.reqId).toBe(checkForReqId);
@@ -500,7 +519,7 @@ describe("API Gateway", function () {
 
         bus.subscribe("http.post.foo").forwardToHttp("http://127.0.0.1:" + expressPort + "/foobar");
 
-        app.post("/foobar", (req, res) => {            
+        app.post("/foobar", (req, res) => {
             res.send({
                 reqId: "reqId",
                 status: 500,
@@ -511,9 +530,9 @@ describe("API Gateway", function () {
             });
         });
 
-        doFormDataRequest('/foo', function(error, response, respBody) {
+        doFormDataRequest('/foo', function (error, response, respBody) {
             let body = JSON.parse(respBody);
-            
+
             expect(response.statusCode).toBe(500);
             expect(body.status).toBe(500);
             expect(body.error.title).toBe("Upload totally failed");

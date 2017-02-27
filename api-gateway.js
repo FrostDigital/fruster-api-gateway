@@ -28,6 +28,12 @@ app.use(cors({
 }));
 app.use(timeout(conf.httpTimeout));
 app.use(bodyParser.json({
+    type: (req) => {
+        let contentType = req.headers["content-type"] || "",
+            includesJson = contentType.includes("json");
+
+        return includesJson;
+    },
     limit: conf.maxRequestSize
 }));
 app.use(bodyParser.urlencoded({
