@@ -8,7 +8,7 @@ module.exports = {
   allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || '*',
 
   // Specify allowed headers for CORS, can be a comma separated string if multiple
-  allowedHeaders: process.env.ALLOWED_HEADERS || "content-type",
+  allowedHeaders: process.env.ALLOWED_HEADERS || "",
 
   // If stack traces should be leaked error responses
   printStacktrace: parseBool(process.env.PRINT_STACKTRACE, true),
