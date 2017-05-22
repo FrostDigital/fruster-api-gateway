@@ -24,7 +24,8 @@ var util = require("util");
 
 app.use(cors({
     origin: conf.allowOrigin,
-    credentials: true
+    credentials: true,
+    allowedHeaders: conf.allowedHeaders
 }));
 app.use(timeout(conf.httpTimeout));
 app.use(bodyParser.json({
