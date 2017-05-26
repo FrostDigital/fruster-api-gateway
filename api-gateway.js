@@ -130,10 +130,9 @@ function decodeToken(httpReq, reqId) {
     return Promise.resolve({});
 }
 
-
-function invokeInterceptors(subject, message) { 
+function invokeRequestInterceptors(subject, message) { 
     const matchedInterceptors = conf.interceptors.filter(interceptor => {
-        return interceptor.match(subject);
+        return interceptor.type === "request" && interceptor.match(subject);
     });    
         
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
@@ -157,7 +156,7 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
     const subject = utils.createSubject(httpReq);
     const message = utils.createRequest(httpReq, reqId, decodedToken);
     
-    return invokeInterceptors(subject, message)
+    return invokeRequestInterceptors(subject, message)
         .then(interceptedReq => {
             log.debug("Sending to subject", subject);
             log.silly(interceptedReq);
