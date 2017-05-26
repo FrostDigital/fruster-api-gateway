@@ -22,6 +22,11 @@ const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
 const dateStarted = new Date();
 
+const interceptAction = {
+    respond: "respond",
+    next: "next"
+};
+
 app.use(cors({
     origin: conf.allowOrigin,
     credentials: true,
@@ -134,9 +139,12 @@ function invokeRequestInterceptors(subject, message) {
     const matchedInterceptors = conf.interceptors.filter(interceptor => {
         return interceptor.type === "request" && interceptor.match(subject);
     });    
-        
+    
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
-        return bus.request(interceptor.targetSubject, _message);
+        if(_message.interceptAction === interceptAction.respond) {
+            return _message;
+        }
+        return bus.request(interceptor.targetSubject, _message);            
     }, message);
 }
 
@@ -158,6 +166,12 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
     
     return invokeRequestInterceptors(subject, message)
         .then(interceptedReq => {
+
+            if(interceptedReq.interceptAction === interceptAction.respond) {
+                delete interceptedReq.interceptAction;
+                return interceptedReq;
+            } 
+
             log.debug("Sending to subject", subject);
             log.silly(interceptedReq);
 

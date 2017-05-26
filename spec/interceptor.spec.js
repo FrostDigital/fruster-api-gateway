@@ -64,7 +64,6 @@ describe("Interceptors", function () {
         });
     });
 
-
     it("should return error from interceptor", function (done) {    	   
     	testUtils.mockService({
     		subject: "interceptor-1",    		
@@ -91,6 +90,21 @@ describe("Interceptors", function () {
         });
     });
 
+    it("should respond directly from interceptor", function (done) {           
+        testUtils.mockService({
+            subject: "interceptor-1",           
+            resp: {
+                status: 200,
+                interceptAction: "respond",
+                data: {}                
+            }
+        });
+                        
+        get("/foo", function (error, response, body) {        
+            expect(response.statusCode).toBe(200);
+            done();
+        });
+    });
 
     function get(path, headers, cb) {
         if (typeof (headers) === "function") {
