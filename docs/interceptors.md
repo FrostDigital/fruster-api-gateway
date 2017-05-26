@@ -46,9 +46,8 @@ Interceptors are implemented in each service that exposes an interceptor endpoin
 
 Each interceptor can take _one_ of the following actions:
 
-* `respond` to instruct API gateway to provide a response directly and not pass further down the chain
-* `next` to instruct API gateway to pass the message down the chain but using the (optionally) modified response returned by interceptor
-* `noop` do nothing but continue processing (is this really needed?)
+* `respond` to instruct API gateway to provide a response directly and not pass it further down the chain
+* `next` to instruct API gateway to pass the message down the chain but using the (optionally) modified response returned by interceptor (default)
 
 > Important: If interceptor responds with an error, the API gateway will not continue to process it and respond directly.
 
@@ -72,7 +71,7 @@ Example:
 	{
 		"reqId": "079e5e36-17ad-457e-8777-f998f34142cf",
 		"status": 200,
-		"interceptAction": "next",  // <--
+		"interceptAction": "next",  // <-- 
 		"data": {
 			"foo": "bar",
 			"hello": "world from interceptor"
