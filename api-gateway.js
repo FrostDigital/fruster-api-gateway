@@ -63,7 +63,10 @@ app.use(function (httpReq, httpRes, next) {
 
     decodeToken(httpReq, reqId)            
         .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
-        .then(internalRes => sendHttpReponse(reqId, internalRes, httpRes))
+        .then(internalRes => {
+            logResponse(reqId, internalRes, reqStartTime);
+            return sendHttpReponse(reqId, internalRes, httpRes);
+        })        
         .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
