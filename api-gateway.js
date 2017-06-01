@@ -50,7 +50,7 @@ app.use(bearerToken());
 
 
 app.get("/health", function (req, res) {
-    setCacheHeaders(res);
+    setNoCacheHeaders(res);
     
     res.json({
         status: "Alive since " + dateStarted
@@ -238,7 +238,7 @@ function sendHttpReponse(reqId, internalRes, httpRes) {
     setRequestId(reqId, internalRes);
 
     if(conf.noCache) {
-        setCacheHeaders(httpRes);        
+        setNoCacheHeaders(httpRes);        
     }
 
     httpRes
@@ -255,7 +255,7 @@ function setRequestId(reqId, resp) {
     }
 }
 
-function setCacheHeaders(res) {
+function setNoCacheHeaders(res) {
     res.header("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate");
     res.header("Pragma", "no-cache");
     res.header("Expires", 0);
