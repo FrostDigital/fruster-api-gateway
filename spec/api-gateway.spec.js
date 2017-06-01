@@ -75,9 +75,36 @@ describe("API Gateway", function () {
         get("/foo?foo=bar", function (error, response, body) {
             expect(response.statusCode).toBe(201);
             expect(response.headers["a-header"]).toBe("foo");
+            expect(response.headers["etag"]).toBeDefined();
+            expect(response.headers["cache-control"]).toBeUndefined();
+            expect(response.headers["x-fruster-req-id"]).toBeDefined();
             expect(body.data.foo).toBe("bar");
             expect(body.headers).toBeUndefined();
 
+            done();
+        });
+
+    });
+
+    it("should get no cache headers on HTTP response when NO_CACHE is true", function (done) {
+        conf.noCache = true;
+
+        bus.subscribe("http.get.foo", function (req) {           
+            return {
+                status: 201,                
+                data: {
+                    foo: "bar"
+                }
+            };
+        });
+
+        get("/foo?foo=bar", function (error, response, body) {  
+            expect(response.headers["etag"]).toBeDefined();
+            expect(response.headers["cache-control"]).toBe("max-age=0, no-cache, no-store, must-revalidate");
+            expect(response.headers["pragma"]).toBe("no-cache");
+            expect(response.headers["expires"]).toBe("0");
+
+            conf.noCache = false;
             done();
         });
 

@@ -50,12 +50,14 @@ app.use(bearerToken());
 
 
 app.get("/health", function (req, res) {
+    setNoCacheHeaders(res);
+    
     res.json({
         status: "Alive since " + dateStarted
     });
 });
 
-app.use(function (httpReq, httpRes, next) {
+app.use((httpReq, httpRes, next) => {
     const reqId = uuid.v4();
     const reqStartTime = Date.now();
 
@@ -70,7 +72,7 @@ app.use(function (httpReq, httpRes, next) {
         .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
-app.use(function (err, req, res, next) {
+app.use((err, req, res, next) => {
     res.status(err.status || 500);
 
     let json = {
@@ -235,6 +237,10 @@ function sendHttpReponse(reqId, internalRes, httpRes) {
 
     setRequestId(reqId, internalRes);
 
+    if(conf.noCache) {
+        setNoCacheHeaders(httpRes);        
+    }
+
     httpRes
         .status(internalRes.status)
         .set(internalRes.headers)
@@ -247,6 +253,12 @@ function setRequestId(reqId, resp) {
         log.warn(`Request id in bus response (${resp.reqId}) does not match the one set by API gateway (${reqId})`);
         resp.reqId = reqId;
     }
+}
+
+function setNoCacheHeaders(res) {
+    res.header("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate");
+    res.header("Pragma", "no-cache");
+    res.header("Expires", 0);
 }
 
 function logResponse(reqId, resp, startTime) {
