@@ -40,7 +40,11 @@ module.exports = {
   // Interceptor are named INTERCEPTOR_N where N is a number indicating in which 
   // order the interceptor will run. Is defined in syntax `<subject pattern to intercept>:<interceptor subject>`
   // Example: `INTERCEPTOR_1=http.post.auth.*:foo-service.intercept-login`
-  interceptors: interceptorConfig()
+  interceptors: interceptorConfig(),
+
+  // Adds no cache headers (Cache-control, Pragma and Expires) to instruct
+  // clients not to cache any responses. Etags will be used by default.
+  noCache: process.env.NO_CACHE === "true"
 
 };
 
