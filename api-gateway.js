@@ -209,7 +209,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 
             httpReq.headers.data = JSON.stringify(message);
 
-            return new Promise(resolve => {
+            return new Promise((resolve, reject) => {
                 httpReq
                     .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
                         if (!error) {
