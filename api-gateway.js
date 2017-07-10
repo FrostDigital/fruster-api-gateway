@@ -51,7 +51,7 @@ app.use(bearerToken());
 
 app.get("/health", function (req, res) {
     setNoCacheHeaders(res);
-    
+
     res.json({
         status: "Alive since " + dateStarted
     });
@@ -63,12 +63,12 @@ app.use((httpReq, httpRes, next) => {
 
     logRequest(reqId, httpReq);
 
-    decodeToken(httpReq, reqId)            
+    decodeToken(httpReq, reqId)
         .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
         .then(internalRes => {
             logResponse(reqId, internalRes, reqStartTime);
             return sendHttpReponse(reqId, internalRes, httpRes);
-        })        
+        })
         .catch(err => handleError(err, httpRes, reqId, reqStartTime));
 });
 
@@ -130,7 +130,7 @@ function decodeToken(httpReq, reqId) {
             .catch(err => {
                 if (err.status == 401 || err.status == 403) {
                     log.debug("Failed to decode token (got error " + err.code + ") will expire cookie if present");
-                    err.headers = err.headers ||  {};
+                    err.headers = err.headers || {};
                     err.headers["Set-Cookie"] = "jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                 }
                 throw err;
@@ -140,16 +140,29 @@ function decodeToken(httpReq, reqId) {
     return Promise.resolve({});
 }
 
-function invokeRequestInterceptors(subject, message) { 
+function invokeRequestInterceptors(subject, message) {
     const matchedInterceptors = conf.interceptors.filter(interceptor => {
         return interceptor.type === "request" && interceptor.match(subject);
-    });    
-    
+    });
+
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
-        if(_message.interceptAction === interceptAction.respond) {
+        if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);            
+        return bus.request(interceptor.targetSubject, _message);
+    }, message);
+}
+
+function invokeResponseInterceptors(subject, message) {
+    const matchedInterceptors = conf.interceptors.filter(interceptor => {
+        return interceptor.type === "response" && interceptor.match(subject);
+    });
+
+    return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
+        if (_message.interceptAction === interceptAction.respond) {
+            return _message;
+        }
+        return bus.request(interceptor.targetSubject, _message);
     }, message);
 }
 
@@ -168,14 +181,14 @@ function getToken(httpReq) {
 function sendInternalRequest(httpReq, reqId, decodedToken) {
     const subject = utils.createSubject(httpReq);
     const message = utils.createRequest(httpReq, reqId, decodedToken);
-    
+
     return invokeRequestInterceptors(subject, message)
         .then(interceptedReq => {
 
-            if(interceptedReq.interceptAction === interceptAction.respond) {
+            if (interceptedReq.interceptAction === interceptAction.respond) {
                 delete interceptedReq.interceptAction;
                 return interceptedReq;
-            } 
+            }
 
             log.debug("Sending to subject", subject);
             log.silly(interceptedReq);
@@ -191,11 +204,30 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
             // the api gateway.
 
             if (isMultipart(httpReq)) {
-                return sendInternalMultipartRequest(subject, interceptedReq, httpReq);
+                return sendInternalMultipartRequest(subject, interceptedReq, httpReq)
+                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
+                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
             } else {
-                return sendInternalBusRequest(subject, interceptedReq);
+                return sendInternalBusRequest(subject, interceptedReq)
+                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
+                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
             }
         });
+}
+
+function prepareInterceptResponseMessage(response, message) {
+    const interceptMessage = Object.assign({}, response);
+    interceptMessage.query = message.query;
+    interceptMessage.params = message.params;
+    interceptMessage.path = message.path;
+    return interceptMessage;
+}
+
+function cleanInterceptedResponse(response, interceptedResponse) {
+    delete interceptedResponse.query;
+    delete interceptedResponse.params;
+    delete interceptedResponse.path;
+    return interceptedResponse;
 }
 
 function sendInternalMultipartRequest(subject, message, httpReq) {
@@ -237,8 +269,8 @@ function sendHttpReponse(reqId, internalRes, httpRes) {
 
     setRequestId(reqId, internalRes);
 
-    if(conf.noCache) {
-        setNoCacheHeaders(httpRes);        
+    if (conf.noCache) {
+        setNoCacheHeaders(httpRes);
     }
 
     httpRes
@@ -281,7 +313,7 @@ function logError(reqId, err, startTime) {
         stringifiedError = err.error;
     }
 
-    if (err.status >= 500 ||  err.status == 408) {
+    if (err.status >= 500 || err.status == 408) {
         log.error(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
     } else {
         log.info(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
@@ -296,7 +328,7 @@ function logRequest(reqId, req) {
 }
 
 function isTrace() {
-    return log.transports.console.level == "trace" ||  log.transports.console.level == "silly";
+    return log.transports.console.level == "trace" || log.transports.console.level == "silly";
 }
 
 function isMultipart(httpReq) {
@@ -325,11 +357,11 @@ module.exports = {
         let startHttpServer = new Promise(function (resolve, reject) {
             let server = http.createServer(app)
                 .listen(httpServerPort);
-            
+
             server.on("error", reject);
-            
+
             server.on("listening", () => {
-                log.info("HTTP server listening for on port", httpServerPort);     
+                log.info("HTTP server listening for on port", httpServerPort);
                 resolve();
             });
 
