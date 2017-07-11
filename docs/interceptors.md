@@ -6,8 +6,6 @@ The API gateway can via configuration define which subjects that will be routed 
 
 An interceptor can be invoked either during incoming request handling or for post processing the outgoing response. 
 
-> Important: At the moment API gateway only implements request interceptors!
-
 ## Defining interceptors in configuration
 
 Each interceptor needs to be defined in API gateway configuration. Naming of the env var is convention based so all configuration starting with `INTERCEPTOR_` will be parsed as an interceptor.
