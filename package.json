@@ -15,9 +15,9 @@
     "debug": "~2.2.0",
     "express": "~4.13.4",
     "express-bearer-token": "^2.1.0",
-    "fruster-bus": "0.1.12",
-    "fruster-health": "~0.0.10",
-    "fruster-log": "~0.0.6",
+    "fruster-bus": "^0.2.7",
+    "fruster-health": "~0.0.11",
+    "fruster-log": "~0.0.11",
     "install": "^0.8.1",
     "jade": "~1.11.0",
     "lodash": "^4.16.2",
@@ -31,11 +31,11 @@
     "ws": "^2.0.3"
   },
   "devDependencies": {
-    "multiparty": "^4.1.2",
-    "jasmine": "^2.4.1",
-    "request": "^2.74.0",
+    "fruster-test-utils": "^0.3.11",
+    "jasmine": "^2.7.0",
     "jasmine-spec-reporter": "^2.7.0",
-    "fruster-test-utils": "^0.3.11"
+    "multiparty": "^4.1.2",
+    "request": "^2.74.0"
   },
   "engines": {
     "node": "6.4.0"
