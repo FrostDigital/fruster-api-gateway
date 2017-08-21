@@ -11,7 +11,7 @@
     "body-parser": "~1.15.1",
     "connect-timeout": "^1.7.0",
     "cookie-parser": "~1.4.3",
-    "cors": "^2.7.1",
+    "cors": "^2.8.4",
     "debug": "~2.2.0",
     "express": "~4.13.4",
     "express-bearer-token": "^2.1.0",
@@ -31,8 +31,8 @@
     "ws": "^2.0.3"
   },
   "devDependencies": {
-    "fruster-test-utils": "^0.3.11",
-    "jasmine": "^2.7.0",
+    "fruster-test-utils": "^0.3.12",
+    "jasmine": "^2.4.1",
     "jasmine-spec-reporter": "^2.7.0",
     "multiparty": "^4.1.2",
     "request": "^2.74.0"
