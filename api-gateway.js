@@ -49,7 +49,7 @@ app.use(cookieParser());
 app.use(bearerToken());
 
 
-app.get("/health", function (req, res) {
+app.get("/health", function(req, res) {
     setNoCacheHeaders(res);
 
     res.json({
@@ -118,6 +118,8 @@ function handleError(err, httpRes, reqId, reqStartTime) {
 function decodeToken(httpReq, reqId) {
     const encodedToken = getToken(httpReq);
 
+    console.log("encodedToken", encodedToken);
+
     if (encodedToken) {
         const decodeReq = {
             reqId: reqId,
@@ -168,10 +170,11 @@ function invokeResponseInterceptors(subject, message) {
 
 function getToken(httpReq) {
     let token;
-
+    console.log("httpReq.cookies[conf.authCookieName]", httpReq.cookies[conf.authCookieName]);
+    console.log("httpReq.token", httpReq.token);
     if (httpReq.token) {
         token = httpReq.token;
-    } else if (httpReq.cookies[conf.authCookieName]) {
+    } else if (httpReq.cookies[conf.authCookieName] && httpReq.cookies[conf.authCookieName].toLowerCase() !== "deleted") {
         token = httpReq.cookies[conf.authCookieName];
     }
 
@@ -352,9 +355,9 @@ function isMultipart(httpReq) {
 // }
 
 module.exports = {
-    start: function (httpServerPort, busAddress) {
+    start: function(httpServerPort, busAddress) {
 
-        let startHttpServer = new Promise(function (resolve, reject) {
+        let startHttpServer = new Promise(function(resolve, reject) {
             let server = http.createServer(app)
                 .listen(httpServerPort);
 
@@ -368,7 +371,7 @@ module.exports = {
             return resolve(server);
         });
 
-        let connectToBus = function () {
+        let connectToBus = function() {
             return bus.connect(busAddress);
         };
 
