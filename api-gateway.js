@@ -118,8 +118,6 @@ function handleError(err, httpRes, reqId, reqStartTime) {
 function decodeToken(httpReq, reqId) {
     const encodedToken = getToken(httpReq);
 
-    console.log("encodedToken", encodedToken);
-
     if (encodedToken) {
         const decodeReq = {
             reqId: reqId,
@@ -170,8 +168,6 @@ function invokeResponseInterceptors(subject, message) {
 
 function getToken(httpReq) {
     let token;
-    console.log("httpReq.cookies[conf.authCookieName]", httpReq.cookies[conf.authCookieName]);
-    console.log("httpReq.token", httpReq.token);
     if (httpReq.token) {
         token = httpReq.token;
     } else if (httpReq.cookies[conf.authCookieName] && httpReq.cookies[conf.authCookieName].toLowerCase() !== "deleted") {
