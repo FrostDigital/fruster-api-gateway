@@ -14,7 +14,6 @@ const utils = require("./utils");
 const uuid = require("uuid");
 const bearerToken = require("express-bearer-token");
 const request = require("request");
-const Minimatch = require("minimatch").Minimatch;
 const Promise = require("bluebird");
 const util = require("util");
 
@@ -333,22 +332,6 @@ function isTrace() {
 function isMultipart(httpReq) {
     return httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart");
 }
-
-// function initInterceptors() {    
-//     interceptors = conf.interceptors.map(interceptor => {
-//         let split = interceptor.split(":"); 
-//         const patternSplit = split[0].split(",");
-//         const targetSubject = split[1];
-
-//         return {
-//             pattern: split[0],
-//             targetSubject: targetSubject,
-//             matchers: patternSplit.map(pattern => new Minimatch(pattern))
-//         };
-//     });
-
-//     log.info(`Initialized ${interceptors.length} interceptor(s)`); 
-// }
 
 module.exports = {
     start: function(httpServerPort, busAddress) {

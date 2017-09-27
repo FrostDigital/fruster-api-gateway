@@ -5,7 +5,6 @@ const apiGw = require("../api-gateway");
 const testUtils = require("fruster-test-utils");
 const interceptorConfig = require("../lib/interceptor-config");
 
-
 describe("Interceptors", function () {
 
     const httpPort = Math.floor(Math.random() * 6000 + 2000);
@@ -13,6 +12,7 @@ describe("Interceptors", function () {
 
     testUtils.startBeforeEach({
         service: (connection) => apiGw.start(httpPort, connection.natsUrl),
+        mockNats: true,
         bus: bus
     });
 

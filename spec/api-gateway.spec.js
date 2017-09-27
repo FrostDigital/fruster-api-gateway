@@ -1,61 +1,54 @@
-const request = require("request"),
-    fs = require("fs"),
-    conf = require("../conf"),
-    bus = require("fruster-bus"),
-    nsc = require("nats-server-control"),
-    uuid = require("uuid"),
-    apiGw = require("../api-gateway"),
-    util = require("util"),
-    multiparty = require("multiparty"),
-    http = require("http"),
-    express = require("express"),
-    WebSocket = require("ws"),
-    FrusterWebBus = require("../lib/FrusterWebBus");
+const request = require("request");
+const fs = require("fs");
+const conf = require("../conf");
+const bus = require("fruster-bus");
+const uuid = require("uuid");
+const apiGw = require("../api-gateway");
+const util = require("util");
+const multiparty = require("multiparty");
+const http = require("http");
+const express = require("express");
+const WebSocket = require("ws");
+const FrusterWebBus = require("../lib/FrusterWebBus");
+const testUtils = require("fruster-test-utils");
 
+describe("API Gateway", () => {
+    let natsServer;
+    let baseUri;
+    let webSocketBaseUri;
+    let httpPort;
+    let server;
 
-describe("API Gateway", function () {
-    var natsServer;
-    var baseUri;
-    var webSocketBaseUri;
+    testUtils.startBeforeEach({
+        service: (connection) => {
+            httpPort = Math.floor(Math.random() * 6000 + 2000);
+            baseUri = "http://127.0.0.1:" + httpPort;
+            webSocketBaseUri = "ws://127.0.0.1:" + httpPort;
 
-    beforeEach(done => {
-        var httpPort = Math.floor(Math.random() * 6000 + 2000);
-        var webSocketPort = Math.floor(Math.random() * 6000 + 2000);
-        var busPort = Math.floor(Math.random() * 6000 + 2000);
-        var busAddress = "nats://localhost:" + busPort;
-
-        baseUri = "http://127.0.0.1:" + httpPort;
-        webSocketBaseUri = "ws://127.0.0.1:" + httpPort;
-
-        nsc.startServer(busPort)
-            .then(server => {
-                natsServer = server;
-            })
-            .then(() => apiGw.start(httpPort, [busAddress]))
-            .then(server => new FrusterWebBus(server, {
+            return apiGw.start(httpPort, connection.natsUrl)
+                .then(_server => {
+                    server = _server
+                });
+        },
+        mockNats: true,
+        bus: bus,
+        afterStart: (connection) => {  
+            new FrusterWebBus(server, {
                 test: true
-            }))
-            .then(done)
-            .catch(done.fail);
-    });
-
-    afterEach(() => {
-        bus.closeAll();
-        if (natsServer) {
-            natsServer.kill();
+            });
         }
     });
 
-    it("should returns status code 404 if gateway does not recieve a response", function (done) {
-        get("/foo", function (error, response, body) {
+    it("should returns status code 404 if gateway does not recieve a response", (done) => {
+        get("/foo", (error, response, body) => {
             expect(response.statusCode).toBe(404);
             expect(body.status).toBe(404);
             done();
         });
     });
 
-    it("should create and recieve bus message for HTTP GET", function (done) {
-        bus.subscribe("http.get.foo", function (req) {
+    it("should create and recieve bus message for HTTP GET", (done) => {
+        bus.subscribe("http.get.foo", (req) => {
             expect(req.path).toBe("/foo");
             expect(req.method).toBe("GET");
             expect(req.reqId).toBeDefined();
@@ -72,7 +65,7 @@ describe("API Gateway", function () {
             };
         });
 
-        get("/foo?foo=bar", function (error, response, body) {
+        get("/foo?foo=bar", (error, response, body) => {
             expect(response.statusCode).toBe(201);
             expect(response.headers["a-header"]).toBe("foo");
             expect(response.headers["etag"]).toBeDefined();
@@ -86,10 +79,10 @@ describe("API Gateway", function () {
 
     });
 
-    it("should get no cache headers on HTTP response when NO_CACHE is true", function (done) {
+    it("should get no cache headers on HTTP response when NO_CACHE is true", (done) => {
         conf.noCache = true;
 
-        bus.subscribe("http.get.foo", function (req) {           
+        bus.subscribe("http.get.foo", (req) => {           
             return {
                 status: 201,                
                 data: {
@@ -98,7 +91,7 @@ describe("API Gateway", function () {
             };
         });
 
-        get("/foo?foo=bar", function (error, response, body) {  
+        get("/foo?foo=bar", (error, response, body) => {  
             expect(response.headers["etag"]).toBeDefined();
             expect(response.headers["cache-control"]).toBe("max-age=0, no-cache, no-store, must-revalidate");
             expect(response.headers["pragma"]).toBe("no-cache");
@@ -110,10 +103,10 @@ describe("API Gateway", function () {
 
     });
 
-    it("should create and recieve bus message for HTTP GET in unwrapped mode", function (done) {
+    it("should create and recieve bus message for HTTP GET in unwrapped mode", (done) => {
         conf.unwrapMessageData = true;
 
-        bus.subscribe("http.get.foo", function (req) {
+        bus.subscribe("http.get.foo", (req) => {
             return {
                 status: 200,
                 data: {
@@ -122,7 +115,7 @@ describe("API Gateway", function () {
             };
         });
 
-        get("/foo", function (error, response, body) {
+        get("/foo", (error, response, body) => {
             expect(body.foo).toBe("bar");
             expect(response.statusCode).toBe(200);
             conf.unwrapMessageData = false;
@@ -130,8 +123,8 @@ describe("API Gateway", function () {
         });
     });
 
-    it("should return error status code from bus", function (done) {
-        bus.subscribe("http.post.bar", function (req) {
+    it("should return error status code from bus", (done) => {
+        bus.subscribe("http.post.bar", (req) => {
             return {
                 status: 420,
                 headers: {
@@ -140,15 +133,15 @@ describe("API Gateway", function () {
             };
         });
 
-        post("/bar", function (error, response, body) {
+        post("/bar", (error, response, body) => {
             expect(response.statusCode).toBe(420);
             expect(response.headers["x-foo"]).toBe("bar");
             done();
         });
     });
 
-    it("should return 403 if validation of JWT cookie failed", function (done) {
-        bus.subscribe("auth-service.decode-token", function (req) {
+    it("should return 403 if validation of JWT cookie failed", (done) => {
+        bus.subscribe("auth-service.decode-token", (req) => {
             return {
                 status: 403,
                 error: {
@@ -159,15 +152,15 @@ describe("API Gateway", function () {
 
         get("/foo", {
             cookie: "jwt=acookie"
-        }, function (error, response, body) {
+        }, (error, response, body) => {
             expect(response.statusCode).toBe(403);
             expect(body.error.code).toBe("auth-service.403.1");
             done();
         });
     });
 
-    it("should return 403 if validation of JWT in auth header failed", function (done) {
-        bus.subscribe("auth-service.decode-token", function (req) {
+    it("should return 403 if validation of JWT in auth header failed", (done) => {
+        bus.subscribe("auth-service.decode-token", (req) => {
             expect(req.data).toBe("a-token");
             return {
                 status: 403,
@@ -179,15 +172,15 @@ describe("API Gateway", function () {
 
         get("/foo", {
             authorization: "Bearer a-token"
-        }, function (error, response, body) {
+        }, (error, response, body) => {
             expect(response.statusCode).toBe(403);
             expect(body.error.code).toBe("auth-service.403.1");
             done();
         });
     });
 
-    it("should set user data with decoded jwt cookie", function (done) {
-        bus.subscribe("auth-service.decode-token", function (req) {
+    it("should set user data with decoded jwt cookie", (done) => {
+        bus.subscribe("auth-service.decode-token", (req) => {
             expect(req.data).toBe("acookie");
             return {
                 status: 200,
@@ -195,7 +188,7 @@ describe("API Gateway", function () {
             };
         });
 
-        bus.subscribe("http.get.foo", function (req) {
+        bus.subscribe("http.get.foo", (req) => {
             expect(req.user).toBe("decoded-cookie");
             return {
                 status: 200,
@@ -207,15 +200,15 @@ describe("API Gateway", function () {
 
         get("/foo", {
             cookie: "jwt=acookie"
-        }, function (error, response, body) {
+        }, (error, response, body) => {
             expect(response.statusCode).toBe(200);
             expect(body.user).toBeUndefined();
             done();
         });
     });
 
-    it("should set user data with decoded jwt in auth header", function (done) {
-        bus.subscribe("auth-service.decode-token", function (req) {
+    it("should set user data with decoded jwt in auth header", (done) => {
+        bus.subscribe("auth-service.decode-token", (req) => {
             expect(req.data).toBe("a-token");
             return {
                 status: 200,
@@ -223,7 +216,7 @@ describe("API Gateway", function () {
             };
         });
 
-        bus.subscribe("http.get.foo", function (req) {
+        bus.subscribe("http.get.foo", (req) => {
             expect(req.user).toBe("decoded-cookie");
             return {
                 status: 200,
@@ -235,15 +228,15 @@ describe("API Gateway", function () {
 
         get("/foo", {
             authorization: "Bearer a-token"
-        }, function (error, response, body) {
+        }, (error, response, body) => {
             expect(response.statusCode).toBe(200);
             expect(body.user).toBeUndefined();
             done();
         });
     });
 
-    it("should not try to decode token if none is present", function (done) {
-        bus.subscribe("http.get.foo", function (req) {
+    it("should not try to decode token if none is present", (done) => {
+        bus.subscribe("http.get.foo", (req) => {
             return {
                 status: 200,
                 data: {
@@ -252,29 +245,29 @@ describe("API Gateway", function () {
             };
         });
 
-        get("/foo", function (error, response, body) {
+        get("/foo", (error, response, body) => {
             expect(response.statusCode).toBe(200);
             expect(body.user).toBeUndefined();
             done();
         });
     });
 
-    it("should set reqId in HTTP response even though none is returned from bus", function (done) {
-        bus.subscribe("http.get.foo", function (req) {
+    it("should set reqId in HTTP response even though none is returned from bus", (done) => {
+        bus.subscribe("http.get.foo", (req) => {
             return {
                 status: 200
             };
         });
 
-        get("/foo", function (error, response, body) {
+        get("/foo", (error, response, body) => {
             expect(response.statusCode).toBe(200);
             expect(body.reqId).toBeDefined();
             done();
         });
     });
 
-    it("should be possible to send content type containing json", function (done) {
-        bus.subscribe("http.post.content-type-json", function (req) {
+    it("should be possible to send content type containing json", (done) => {
+        bus.subscribe("http.post.content-type-json", (req) => {
             expect(req.data.hello).toBe(1337);
             return {
                 status: 200
@@ -300,7 +293,7 @@ describe("API Gateway", function () {
             }
         };
 
-        bus.subscribe("auth-service.decode-token", function (req) {
+        bus.subscribe("auth-service.decode-token", (req) => {
             return {
                 status: 200,
                 data: {
@@ -349,7 +342,7 @@ describe("API Gateway", function () {
                 }
             };
 
-        bus.subscribe("auth-service.decode-token", function (req) {
+        bus.subscribe("auth-service.decode-token", (req) => {
             return {
                 status: 200,
                 data: {
@@ -391,7 +384,7 @@ describe("API Gateway", function () {
     });
 
     it("web bus - should not allow users without the correct scopes to connect", done => {
-        bus.subscribe("auth-service.decode-token", function (req) {
+        bus.subscribe("auth-service.decode-token", (req) => {
             return {
                 status: 200,
                 data: {
@@ -428,7 +421,7 @@ describe("API Gateway", function () {
             }
         };
 
-        bus.subscribe("auth-service.decode-token", function (req) {
+        bus.subscribe("auth-service.decode-token", (req) => {
             return {
                 status: 200,
                 data: {
