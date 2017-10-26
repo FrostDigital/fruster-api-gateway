@@ -21,6 +21,7 @@
     "install": "^0.8.1",
     "jade": "~1.11.0",
     "lodash": "^4.16.2",
+    "minimatch": "^3.0.4",
     "ms": "^0.7.1",
     "nats": "^0.6.4",
     "node-http-client": "0.0.0",
