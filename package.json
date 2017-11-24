@@ -31,7 +31,7 @@
         "ws": "^2.0.3"
     },
     "devDependencies": {
-        "fruster-test-utils": "^0.3.11",
+        "fruster-test-utils": "^0.3.20",
         "jasmine": "^2.7.0",
         "jasmine-spec-reporter": "^2.7.0",
         "multiparty": "^4.1.2",
