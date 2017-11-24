@@ -278,7 +278,11 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 }
 
 function sendInternalBusRequest(subject, message) {
-    return bus.request(subject, message, ms(conf.busTimeout));
+    return bus.request({
+        subject,
+        message,
+        timeout: ms(conf.busTimeout)
+    });
 }
 
 function sendHttpReponse(reqId, internalRes, httpRes) {
