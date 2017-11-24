@@ -32,7 +32,8 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-1",
-            resp: (resp) => {
+            response: (resp) => {
+                resp.status = 200;
                 resp.interceptor1 = true;
                 resp.data.wasHere = "interceptor-1";
                 return resp;
@@ -41,7 +42,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-2",
-            resp: (resp) => {
+            response: (resp) => {
                 resp.interceptor2 = true;
                 resp.data.wasHere = "interceptor-2";
                 return resp;
@@ -50,7 +51,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-response",
-            resp: (resp) => {
+            response: (resp) => {
                 return resp;
             }
         });
@@ -60,8 +61,8 @@ describe("Interceptors", function () {
             expectRequest: (req) => {
                 expect(req.reqId).toBeDefined();
                 expect(req.data.wasHere).toBe("interceptor-2");
-                expect(req.interceptor1).toBeTruthy();
-                expect(req.interceptor2).toBeTruthy();
+                expect(req.interceptor1).toBeTruthy("req.interceptor1");
+                expect(req.interceptor2).toBeTruthy("req.interceptor2");
             }
         });
 
@@ -76,21 +77,21 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-1",
-            resp: (resp) => {
+            response: (resp) => {
                 return resp;
             }
         });
 
         testUtils.mockService({
             subject: "interceptor-2",
-            resp: (resp) => {
+            response: (resp) => {
                 return resp;
             }
         });
 
         testUtils.mockService({
             subject: "interceptor-response",
-            resp: (resp) => {
+            response: (resp) => {
                 expect(resp.query.hej).toBe("20", "should add query to intercept request");
                 resp.data.wasHere = "interceptor-response";
                 delete resp.data.helloThere;
@@ -118,7 +119,7 @@ describe("Interceptors", function () {
     it("should return error from interceptor", function (done) {
         testUtils.mockService({
             subject: "interceptor-1",
-            resp: (resp) => {
+            response: (resp) => {
                 resp.interceptor1 = true;
                 return resp;
             }
@@ -126,7 +127,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-2",
-            resp: {
+            response: {
                 status: 400,
                 error: {
                     code: "BAD_REQUEST"
@@ -144,7 +145,7 @@ describe("Interceptors", function () {
     it("should respond directly from interceptor", function (done) {
         testUtils.mockService({
             subject: "interceptor-1",
-            resp: {
+            response: {
                 status: 200,
                 interceptAction: "respond",
                 data: {}
