@@ -44,11 +44,12 @@ app.use(bodyParser.json({
 app.use(bodyParser.urlencoded({
     extended: false
 }));
+// @ts-ignore
 app.use(cookieParser());
 app.use(bearerToken());
 
 
-app.get("/health", function(req, res) {
+app.get("/health", function (req, res) {
     setNoCacheHeaders(res);
 
     res.json({
@@ -111,8 +112,10 @@ function handleError(err, httpRes, reqId, reqStartTime) {
         .json(err);
 }
 
-/*
+/**
  * Token comes either in cookie or in header Authorization: Bearer <token>
+ * 
+ * @return {Object}
  */
 function decodeToken(httpReq, reqId) {
     const encodedToken = getToken(httpReq);
@@ -123,8 +126,11 @@ function decodeToken(httpReq, reqId) {
             data: encodedToken
         };
 
-        return bus
-            .request("auth-service.decode-token", decodeReq)
+        return bus.request({
+            subject: "auth-service.decode-token",
+            message: decodeReq,
+            skipOptionsRequest: true
+        })
             .then(resp => resp.data)
             .catch(err => {
                 if (err.status == 401 || err.status == 403) {
@@ -148,7 +154,11 @@ function invokeRequestInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true
+        });
     }, message);
 }
 
@@ -161,7 +171,11 @@ function invokeResponseInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true
+        });
     }, message);
 }
 
@@ -229,7 +243,12 @@ function cleanInterceptedResponse(response, interceptedResponse) {
 }
 
 function sendInternalMultipartRequest(subject, message, httpReq) {
-    return bus.request(subject, message, ms(conf.busTimeout), true)
+    return bus.request({
+        subject,
+        message,
+        timeout: ms(conf.busTimeout),
+        returnOptionsResponse: true
+    })
         .then((optionsRes) => {
             const httpOptions = optionsRes.data.http;
 
@@ -259,7 +278,11 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 }
 
 function sendInternalBusRequest(subject, message) {
-    return bus.request(subject, message, ms(conf.busTimeout));
+    return bus.request({
+        subject,
+        message,
+        timeout: ms(conf.busTimeout)
+    });
 }
 
 function sendHttpReponse(reqId, internalRes, httpRes) {
@@ -334,9 +357,9 @@ function isMultipart(httpReq) {
 }
 
 module.exports = {
-    start: function(httpServerPort, busAddress) {
+    start: function (httpServerPort, busAddress) {
 
-        let startHttpServer = new Promise(function(resolve, reject) {
+        let startHttpServer = new Promise(function (resolve, reject) {
             let server = http.createServer(app)
                 .listen(httpServerPort);
 
@@ -350,7 +373,7 @@ module.exports = {
             return resolve(server);
         });
 
-        let connectToBus = function() {
+        let connectToBus = function () {
             return bus.connect(busAddress);
         };
 
