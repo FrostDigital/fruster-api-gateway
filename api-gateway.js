@@ -48,7 +48,7 @@ app.use(cookieParser());
 app.use(bearerToken());
 
 
-app.get("/health", function(req, res) {
+app.get("/health", function (req, res) {
     setNoCacheHeaders(res);
 
     res.json({
@@ -124,7 +124,11 @@ function decodeToken(httpReq, reqId) {
         };
 
         return bus
-            .request("auth-service.decode-token", decodeReq)
+            .request({
+                skipOptionsRequest: true,
+                subject: "auth-service.decode-token",
+                message: decodeReq
+            })
             .then(resp => resp.data)
             .catch(err => {
                 if (err.status == 401 || err.status == 403) {
@@ -148,7 +152,11 @@ function invokeRequestInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true,
+        });
     }, message);
 }
 
@@ -161,7 +169,11 @@ function invokeResponseInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true,
+        });
     }, message);
 }
 
@@ -334,9 +346,9 @@ function isMultipart(httpReq) {
 }
 
 module.exports = {
-    start: function(httpServerPort, busAddress) {
+    start: function (httpServerPort, busAddress) {
 
-        let startHttpServer = new Promise(function(resolve, reject) {
+        let startHttpServer = new Promise(function (resolve, reject) {
             let server = http.createServer(app)
                 .listen(httpServerPort);
 
@@ -350,7 +362,7 @@ module.exports = {
             return resolve(server);
         });
 
-        let connectToBus = function() {
+        let connectToBus = function () {
             return bus.connect(busAddress);
         };
 
