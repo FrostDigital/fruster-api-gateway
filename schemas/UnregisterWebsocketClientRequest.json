@@ -1,0 +1,26 @@
+{
+    "id": "UnregisterWebsocketClientRequest",
+    "description": "Request to (forcefully) unregister a websocket client",
+    "properties": {
+        "jwt": {
+            "type": "string",
+            "description": "jwt token for a logged in user => will result in any connection to this jwt token being closed. "
+        },
+        "userId": {
+            "type": "string",
+            "description": "user id of a user => will result in all connections by this user being closed."
+        }
+    },
+    "oneOf": [
+        {
+            "required": [
+                "jwt"
+            ]
+        },
+        {
+            "required": [
+                "userId"
+            ]
+        }
+    ]
+}
