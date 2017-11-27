@@ -17,7 +17,7 @@
         "express-bearer-token": "^2.1.0",
         "fruster-bus": "^0.2.17",
         "fruster-health": "~0.0.11",
-        "fruster-log": "~0.0.11",
+        "fruster-log": "~0.0.15",
         "install": "^0.8.1",
         "jade": "~1.11.0",
         "lodash": "^4.16.2",
