@@ -9,7 +9,7 @@ const multiparty = require("multiparty");
 const http = require("http");
 const express = require("express");
 const WebSocket = require("ws");
-const FrusterWebBus = require("../lib/FrusterWebBus");
+const FrusterWebBus = require("../lib/web-bus/FrusterWebBus");
 const testUtils = require("fruster-test-utils");
 
 describe("API Gateway", () => {

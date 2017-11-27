@@ -111,8 +111,10 @@ function handleError(err, httpRes, reqId, reqStartTime) {
         .json(err);
 }
 
-/*
+/**
  * Token comes either in cookie or in header Authorization: Bearer <token>
+ * 
+ * @return {Promise}
  */
 function decodeToken(httpReq, reqId) {
     const encodedToken = getToken(httpReq);
@@ -139,7 +141,7 @@ function decodeToken(httpReq, reqId) {
                 throw err;
             });
     }
-
+    //@ts-ignore
     return Promise.resolve({});
 }
 

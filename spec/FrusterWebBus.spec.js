@@ -2,6 +2,7 @@ const request = require("request");
 const fs = require("fs");
 const conf = require("../conf");
 const bus = require("fruster-bus");
+const log = require("fruster-log");
 const uuid = require("uuid");
 const apiGw = require("../api-gateway");
 const util = require("util");
@@ -9,15 +10,18 @@ const multiparty = require("multiparty");
 const http = require("http");
 const express = require("express");
 const WebSocket = require("ws");
-const FrusterWebBus = require("../lib/FrusterWebBus");
+const FrusterWebBus = require("../lib/web-bus/FrusterWebBus");
 const testUtils = require("fruster-test-utils");
 
-fdescribe("FrusterWebBus", () => {
+describe("FrusterWebBus", () => {
+    const wsEndpointSubject = `ws.post.hello.:userId`;
+    const mockUserId = "hello-there-id";
     let natsServer;
     let baseUri;
     let webSocketBaseUri;
     let httpPort;
     let server;
+    let webBus;
 
     testUtils.startBeforeEach({
         service: async (connection) => {
@@ -26,16 +30,41 @@ fdescribe("FrusterWebBus", () => {
             webSocketBaseUri = "ws://127.0.0.1:" + httpPort;
 
             server = await apiGw.start(httpPort, connection.natsUrl);
+
+            bus.subscribe(wsEndpointSubject, (req) => {
+                return {
+                    status: 200,
+                    data: {
+                        hello: "hello " + req.params.userId
+                    }
+                };
+            });
         },
         mockNats: true,
         bus: bus,
         afterStart: (connection) => {
-            new FrusterWebBus(server, {
+            webBus = new FrusterWebBus(server, {
                 test: true
             });
         }
     });
 
+    function registerMockAuthServiceResponse() {
+        bus.subscribe({
+            subject: "auth-service.decode-token",
+            handle: (req) => {
+                return {
+                    status: 200,
+                    data: {
+                        id: mockUserId,
+                        firstName: "bob",
+                        lastName: "fred",
+                        scopes: conf.webSocketPermissionScope
+                    }
+                };
+            }
+        });
+    }
 
     it("should be possible to connect to web bus", done => {
         const messageToSend = {
@@ -43,19 +72,7 @@ fdescribe("FrusterWebBus", () => {
             data: { some: "data" }
         };
 
-        bus.subscribe({
-            subject: "auth-service.decode-token",
-            responseSchema: "",
-            handle: (req) => {
-                return {
-                    status: 200,
-                    data: {
-                        id: "hello-there-id",
-                        scopes: conf.webSocketPermissionScope
-                    }
-                };
-            }
-        });
+        registerMockAuthServiceResponse();
 
         const ws = new WebSocket(webSocketBaseUri, [], {
             headers: { cookie: "jwt=hello" }
@@ -90,19 +107,7 @@ fdescribe("FrusterWebBus", () => {
             data: { some: "data2" }
         };
 
-        bus.subscribe({
-            subject: "auth-service.decode-token",
-            responseSchema: "",
-            handle: (req) => {
-                return {
-                    status: 200,
-                    data: {
-                        id: "hello-there-id",
-                        scopes: conf.webSocketPermissionScope
-                    }
-                };
-            }
-        });
+        registerMockAuthServiceResponse();
 
         const ws = new WebSocket(webSocketBaseUri, [], {
             headers: { cookie: "jwt=hello" }
@@ -171,19 +176,7 @@ fdescribe("FrusterWebBus", () => {
             data: { some: "data" }
         };
 
-        bus.subscribe({
-            subject: "auth-service.decode-token",
-            responseSchema: "",
-            handle: (req) => {
-                return {
-                    status: 200,
-                    data: {
-                        id: "hello-there-id",
-                        scopes: conf.webSocketPermissionScope
-                    }
-                };
-            }
-        });
+        registerMockAuthServiceResponse();
 
         const ws = new WebSocket(webSocketBaseUri, [], {
             headers: { cookie: "jwt=hello" }
@@ -209,46 +202,52 @@ fdescribe("FrusterWebBus", () => {
         }, 100);
     });
 
-    fit("should be possible to send message to server via web bus", async done => {
-        const subject = `ws.post.${uuid.v4()}.hello.:userId`;
+    it("should be possible to send message to server via web bus", async done => {
         const reqId = uuid.v4();
         const responseText = "This is not the response you are looking for: ";
 
-        bus.subscribe({
-            subject: "auth-service.decode-token",
-            responseSchema: "",
-            handle: (req) => {
-                return {
-                    status: 200,
-                    data: {
-                        id: "hello-there-id",
-                        firstName: "bob",
-                        lastName: "fred",
-                        scopes: conf.webSocketPermissionScope
-                    }
-                };
-            }
-        });
+        registerMockAuthServiceResponse();
 
         const ws = new WebSocket(webSocketBaseUri, [], {
             headers: { cookie: "jwt=hello" }
         });
 
-        bus.subscribe({
-            subject: subject,
-            responseSchema: "",
-            handle: (req) => {
-                console.log("\n");
-                console.log("=======================================");
-                console.log("req");
-                console.log("=======================================");
-                console.log(require("util").inspect(req, null, null, true));
-                console.log("\n");
-                return {
-                    status: 400,
-                    data: req.data
-                };
-            }
+        ws.on("close", () => {
+            done.fail();
+        });
+
+        ws.on("message", (json) => {
+            const response = JSON.parse(json.toString());
+
+            expect(response.status).toBe(200, "response.status");
+            expect(response.data).toBeDefined("response.data");
+            expect(response.data.hello).toBe("hello BOB", "response.data.hello");
+            expect(response.reqId).toBe(reqId, "response.reqId");
+
+            done();
+        });
+
+        setTimeout(() => {
+            ws.send(new Buffer(JSON.stringify({
+                subject: wsEndpointSubject.replace(":userId", "BOB"),
+                message: {
+                    reqId: reqId,
+                    data: {
+                        customMessage: "1337"
+                    }
+                }
+            })));
+        }, 100);
+
+    });
+
+    it("should return 404 if subject is invalid", async done => {
+        const reqId = uuid.v4();
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: { cookie: "jwt=hello" }
         });
 
         ws.on("close", () => {
@@ -258,34 +257,93 @@ fdescribe("FrusterWebBus", () => {
         ws.on("message", (json) => {
             const message = JSON.parse(json.toString());
 
-            console.log("\n");
-            console.log("=======================================");
-            console.log("Ws message");
-            console.log("=======================================");
-            console.log(require("util").inspect(message, null, null, true));
-            console.log("\n");
-
-            expect(message.data).toBeDefined("message.data");
-            expect(message.data.text).toBe(responseText, "message.data.text");
+            expect(message.status).toBe(404, "message.status");
 
             done();
         });
 
         setTimeout(() => {
             ws.send(new Buffer(JSON.stringify({
-                subject: subject,
+                subject: "ws.hello",
                 message: {
                     reqId: reqId,
-                    data: {
-                        customMessage: "1337"
-                    },
-                    params: {
-                        "userId": "BOB"
-                    }
+                    data: {}
                 }
             })));
         }, 100);
 
+    });
+
+    it("should close connection when unregister endpoint with jwt token is called", async done => {
+        const reqId = uuid.v4();
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: { cookie: "jwt=hello" }
+        });
+
+        ws.on("close", () => {
+            done();
+        });
+
+        ws.on("open", async () => {
+            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+                reqId: "hello",
+                data: { jwt: "test-token" }
+            });
+        });
+
+    });
+
+    it("should close connection when unregister endpoint with userId is called", async done => {
+        const reqId = uuid.v4();
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: { cookie: "jwt=hello" }
+        });
+
+        ws.on("close", () => {
+            done();
+        });
+
+        ws.on("open", async () => {
+            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+                reqId: "hello",
+                data: { userId: mockUserId }
+            });
+        });
+
+    });
+
+    it("should return ok if client could not be found", async done => {
+        try {
+            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+                reqId: "hello",
+                data: { userId: "ram-jam" }
+            });
+
+            done();
+        } catch (err) {
+            log.error(err);
+            done.fail();
+        }
+    });
+
+    it("should require userId or jwtToken when unregistering client", async done => {
+        try {
+            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+                reqId: "hello",
+                data: { ram: mockUserId }
+            });
+        } catch (err) {
+            expect(err.error.code).toBe("BAD_REQUEST", "err.error.code");
+            expect(err.status).toBe(400, "err.status");
+
+            done();
+        }
     });
 
 });

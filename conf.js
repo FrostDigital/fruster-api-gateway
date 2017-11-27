@@ -21,15 +21,16 @@ module.exports = {
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
-  maxRequestSize: process.env.MAX_REQUEST_SIZE ||  '100mb',
+  maxRequestSize: process.env.MAX_REQUEST_SIZE || '100mb',
 
-  httpTimeout: process.env.HTTP_TIMEOUT ||  '2s',
+  httpTimeout: process.env.HTTP_TIMEOUT || '2s',
 
+  /**@type {String} */
   busTimeout: process.env.BUS_TIMEOUT || '1s',
 
   unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
 
-  authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt',
+  authCookieName: process.env.AUTH_COOKIE_NAME || 'jwt',
 
   // User scopes required to connect to the fruster web bus
   webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
