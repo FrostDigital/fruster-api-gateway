@@ -32,7 +32,7 @@ describe("API Gateway", () => {
         },
         mockNats: true,
         bus: bus,
-        afterStart: (connection) => {  
+        afterStart: (connection) => {
             new FrusterWebBus(server, {
                 test: true
             });
@@ -82,16 +82,16 @@ describe("API Gateway", () => {
     it("should get no cache headers on HTTP response when NO_CACHE is true", (done) => {
         conf.noCache = true;
 
-        bus.subscribe("http.get.foo", (req) => {           
+        bus.subscribe("http.get.foo", (req) => {
             return {
-                status: 201,                
+                status: 201,
                 data: {
                     foo: "bar"
                 }
             };
         });
 
-        get("/foo?foo=bar", (error, response, body) => {  
+        get("/foo?foo=bar", (error, response, body) => {
             expect(response.headers["etag"]).toBeDefined();
             expect(response.headers["cache-control"]).toBe("max-age=0, no-cache, no-store, must-revalidate");
             expect(response.headers["pragma"]).toBe("no-cache");
@@ -277,184 +277,12 @@ describe("API Gateway", () => {
         post("/content-type-json", {
             "content-type": "application/vnd.contentful.management.v1+json"
         }, {
-            hello: 1337
-        }, (error, response, body) => {
-            expect(response.statusCode).toBe(200);
-            expect(body.reqId).toBeDefined();
-            done();
-        });
-    });
-
-    it("web bus - should be possible to connect to web bus", done => {
-        let messageToSend = {
-            reqId: uuid.v4(),
-            data: {
-                some: "data"
-            }
-        };
-
-        bus.subscribe("auth-service.decode-token", (req) => {
-            return {
-                status: 200,
-                data: {
-                    id: "hello-there-id",
-                    scopes: conf.webSocketPermissionScope
-                }
-            };
-        });
-
-        const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: {
-                cookie: "jwt=hello"
-            }
-        });
-
-        ws.on("message", function (json) {
-            let message = JSON.parse(json);
-
-            expect(message.reqId).toBe(messageToSend.reqId);
-            expect(message.data.some).toBe(messageToSend.data.some);
-            expect(message.subject).toBeDefined("ws.hello-there-id.hello");
-
-            done();
-        });
-
-        ws.on("close", () => {
-            done.fail();
-        });
-
-        setTimeout(() => {
-            bus.request("ws.hello-there-id.hello", messageToSend);
-        }, 100);
-    });
-
-    it("web bus - should only get messages addressed to user's id", done => {
-        let messageToReceive = {
-                reqId: uuid.v4(),
-                data: {
-                    some: "data"
-                }
-            },
-            messageNotToReceive = {
-                reqId: uuid.v4(),
-                data: {
-                    some: "data2"
-                }
-            };
-
-        bus.subscribe("auth-service.decode-token", (req) => {
-            return {
-                status: 200,
-                data: {
-                    id: "hello-there-id",
-                    scopes: conf.webSocketPermissionScope
-                }
-            };
-        });
-
-        const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: {
-                cookie: "jwt=hello"
-            }
-        });
-
-        ws.on("message", function (json) {
-            let message = JSON.parse(json);
-
-            expect(message.reqId).not.toBe(messageNotToReceive.reqId);
-            expect(message.reqId).toBe(messageToReceive.reqId);
-
-            expect(message.data.some).not.toBe(messageNotToReceive.data.some);
-            expect(message.data.some).toBe(messageToReceive.data.some);
-
-            expect(message.subject).not.toBe("ws.hello2-there-id.hello");
-            expect(message.subject).toBe("ws.hello-there-id.hello");
-
-            done();
-        });
-
-        ws.on("close", () => {
-            done.fail();
-        });
-
-        setTimeout(() => {
-            bus.request("ws.hello2-there-id.hello", messageNotToReceive)
-                .then(() => bus.request("ws.hello-there-id.hello", messageToReceive));
-        }, 100);
-    });
-
-    it("web bus - should not allow users without the correct scopes to connect", done => {
-        bus.subscribe("auth-service.decode-token", (req) => {
-            return {
-                status: 200,
-                data: {
-                    id: "hello-there-id",
-                    scopes: ["read.a.book"]
-                }
-            };
-        });
-
-        const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: {
-                cookie: "jwt=hello"
-            }
-        });
-
-        ws.on("close", () => {
-            done();
-        });
-    });
-
-    it("web bus - should not allow non logged in users to connect", done => {
-        const ws = new WebSocket(webSocketBaseUri);
-
-        ws.on("close", () => {
-            done();
-        });
-    });
-
-    it("web bus - should allow broadcasts", done => {
-        let message = {
-            reqId: uuid.v4(),
-            data: {
-                some: "data"
-            }
-        };
-
-        bus.subscribe("auth-service.decode-token", (req) => {
-            return {
-                status: 200,
-                data: {
-                    id: "hello-there-id",
-                    scopes: conf.webSocketPermissionScope
-                }
-            };
-        });
-
-        const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: {
-                cookie: "jwt=hello"
-            }
-        });
-
-        ws.on("message", function (json) {
-            let message = JSON.parse(json);
-
-            expect(message.subject).toBe("ws.hello-there-id.new-message");
-            expect(message.reqId).toBe(message.reqId);
-            expect(message.data.some).toBe(message.data.some);
-            expect(message.subject).toBe(message.subject);
-
-            done();
-        });
-
-        ws.on("close", () => {
-            done.fail();
-        });
-
-        setTimeout(() => {
-            bus.request("ws.*.new-message", message);
-        }, 100);
+                hello: 1337
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(200);
+                expect(body.reqId).toBeDefined();
+                done();
+            });
     });
 
     it("should forward POST request with multipart via http to url specified by bus.subscribe", (done) => {
@@ -598,7 +426,7 @@ describe("API Gateway", () => {
             uri: baseUri + path,
             method: method,
             headers: headers,
-            json: json ||  true
+            json: json || true
         }, cb);
     }
 

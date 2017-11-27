@@ -348,8 +348,8 @@ function isMultipart(httpReq) {
 module.exports = {
     start: function (httpServerPort, busAddress) {
 
-        let startHttpServer = new Promise(function (resolve, reject) {
-            let server = http.createServer(app)
+        const startHttpServer = new Promise((resolve, reject) => {
+            const server = http.createServer(app)
                 .listen(httpServerPort);
 
             server.on("error", reject);
@@ -362,7 +362,7 @@ module.exports = {
             return resolve(server);
         });
 
-        let connectToBus = function () {
+        const connectToBus = () => {
             return bus.connect(busAddress);
         };
 
