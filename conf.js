@@ -16,8 +16,8 @@ module.exports = {
   printStacktrace: parseBool(process.env.PRINT_STACKTRACE, true),
 
   // NATS servers, set multiple if using cluster
-  // Example: `['nats://10.23.45.1:4222', 'nats://10.23.41.8:4222']`
-  bus: parseArray(process.env.BUS) || ['nats://localhost:4222'],
+  // Example: `'nats://10.23.45.1:4222', 'nats://10.23.41.8:4222'`
+  bus: process.env.BUS || 'nats://localhost:4222',
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
@@ -58,4 +58,3 @@ function parseArray(str) {
   }
   return null;
 }
-
