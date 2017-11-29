@@ -13,6 +13,7 @@ const WebSocket = require("ws");
 const FrusterWebBus = require("../lib/web-bus/FrusterWebBus");
 const testUtils = require("fruster-test-utils");
 
+
 describe("FrusterWebBus", () => {
     const wsEndpointSubject = `ws.post.hello.:userId`;
     const mockUserId = "hello-there-id";
@@ -237,6 +238,9 @@ describe("FrusterWebBus", () => {
                     transactionId: transactionId,
                     data: {
                         customMessage: "1337"
+                    },
+                    query: {
+                        pageSize: 12
                     }
                 }
             })));

@@ -62,3 +62,8 @@ Configuration is set with environment variables. All config defaults to values t
 
     # Subject for web sockets
     WEBSOCKET_SUBJECT = "ws.*.>"
+
+
+## License
+
+This project is licensed under the terms of the MIT license
