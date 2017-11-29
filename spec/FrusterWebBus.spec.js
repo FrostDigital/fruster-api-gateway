@@ -33,6 +33,16 @@ describe("FrusterWebBus", () => {
             server = await apiGw.start(httpPort, connection.natsUrl);
 
             bus.subscribe(wsEndpointSubject, (req) => {
+                if (req.data.shouldFail) {
+                    return {
+                        status: 500,
+                        error: {
+                            code: "INTERNAL_SERVER_ERROR",
+                            title: "internal server error",
+                            detail: "Fail because it had to fail"
+                        }
+                    };
+                }
                 return {
                     status: 200,
                     data: {
@@ -237,6 +247,50 @@ describe("FrusterWebBus", () => {
                     reqId: reqId,
                     transactionId: transactionId,
                     data: {
+                        customMessage: "1337"
+                    },
+                    query: {
+                        pageSize: 12
+                    }
+                }
+            })));
+        }, 100);
+
+    });
+
+    it("should return errors from bus request(s)", async done => {
+        const reqId = uuid.v4();
+        const transactionId = uuid.v4();
+        const userId = "BOB";
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: { cookie: "jwt=hello" }
+        });
+
+        ws.on("close", () => {
+            done.fail();
+        });
+
+        ws.on("message", (json) => {
+            const response = JSON.parse(json.toString());
+
+            expect(response.status).toBe(500, "response.status");
+            expect(response.error).toBeDefined("response.error");
+            expect(response.error.code).toBe("INTERNAL_SERVER_ERROR", "response.error.code");
+
+            done();
+        });
+
+        setTimeout(() => {
+            ws.send(new Buffer(JSON.stringify({
+                subject: wsEndpointSubject.replace(":userId", userId),
+                message: {
+                    reqId: reqId,
+                    transactionId: transactionId,
+                    data: {
+                        shouldFail: true,
                         customMessage: "1337"
                     },
                     query: {
