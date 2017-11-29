@@ -17,6 +17,7 @@ const testUtils = require("fruster-test-utils");
 describe("FrusterWebBus", () => {
     const wsEndpointSubject = `ws.post.hello.:userId`;
     const mockUserId = "hello-there-id";
+    const mockUserId2 = "hello-there-id-1337";
     let natsServer;
     let baseUri;
     let webSocketBaseUri;
@@ -64,14 +65,24 @@ describe("FrusterWebBus", () => {
         bus.subscribe({
             subject: "auth-service.decode-token",
             handle: (req) => {
-                return {
-                    status: 200,
-                    data: {
+                const usersByToken = {
+                    hello: {
                         id: mockUserId,
                         firstName: "bob",
                         lastName: "fred",
                         scopes: conf.webSocketPermissionScope
+                    },
+                    hello2: {
+                        id: mockUserId2,
+                        firstName: "bob",
+                        lastName: "fred",
+                        scopes: conf.webSocketPermissionScope
                     }
+                };
+
+                return {
+                    status: 200,
+                    data: usersByToken[req.data]
                 };
             }
         });
@@ -89,7 +100,7 @@ describe("FrusterWebBus", () => {
             headers: { cookie: "jwt=hello" }
         });
 
-        ws.on("message", function (json) {
+        ws.on("message", json => {
             const message = JSON.parse(json.toString());
 
             expect(message.reqId).toBe(messageToSend.reqId);
@@ -100,7 +111,38 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("close", () => {
-            done.fail();
+            done.fail("websocket closed");
+        });
+
+        setTimeout(() => {
+            bus.request("ws.hello-there-id.hello", messageToSend);
+        }, 100);
+    });
+
+    it("should be possible to connect to web bus using Authorization header", done => {
+        const messageToSend = {
+            reqId: uuid.v4(),
+            data: { some: "data" }
+        };
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: { Authorization: "hello" }
+        });
+
+        ws.on("message", json => {
+            const message = JSON.parse(json.toString());
+
+            expect(message.reqId).toBe(messageToSend.reqId);
+            expect(message.data.some).toBe(messageToSend.data.some);
+            expect(message.subject).toBeDefined("ws.hello-there-id.hello");
+
+            done();
+        });
+
+        ws.on("close", () => {
+            done.fail("websocket closed");
         });
 
         setTimeout(() => {
@@ -124,7 +166,7 @@ describe("FrusterWebBus", () => {
             headers: { cookie: "jwt=hello" }
         });
 
-        ws.on("message", function (json) {
+        ws.on("message", json => {
             const message = JSON.parse(json.toString());
 
             expect(message.reqId).not.toBe(messageNotToReceive.reqId);
@@ -140,12 +182,46 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("close", () => {
-            done.fail();
+            done.fail("websocket closed");
         });
 
         setTimeout(() => {
             bus.request("ws.hello2-there-id.hello", messageNotToReceive)
                 .then(() => bus.request("ws.hello-there-id.hello", messageToReceive));
+        }, 100);
+    });
+
+    it("should be possible to send data to a list of users", done => {
+        const req = {
+            to: [mockUserId, "some-other-user", "some-other-user2", mockUserId2],
+            reqId: uuid.v4(),
+            data: {
+                some: "data"
+            }
+        };
+
+        registerMockAuthServiceResponse();
+
+        let wsGotMessage = false;
+        let ws2GotMessage = false;
+
+        const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+        const ws2 = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello2" } });
+        ws.on("close", () => { done.fail("websocket closed"); });
+        ws2.on("close", () => { done.fail("websocket2 closed"); });
+
+        ws.on("message", json => { wsGotMessage = true; });
+        ws2.on("message", json => {
+            ws2GotMessage = true;
+
+            if (wsGotMessage && ws2GotMessage)
+                done();
+            else
+                done.fail();
+        });
+
+        setTimeout(() => {
+            bus.request("ws.*.hello", req);
         }, 100);
     });
 
@@ -187,11 +263,16 @@ describe("FrusterWebBus", () => {
             data: { some: "data" }
         };
 
+        let wsGotMessage = false;
+        let ws2GotMessage = false;
+
         registerMockAuthServiceResponse();
 
-        const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: { cookie: "jwt=hello" }
-        });
+        const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+        const ws2 = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+
+        ws.on("close", () => { done.fail("websocket closed"); });
+        ws2.on("close", () => { done.fail("websocket2 closed"); });
 
         ws.on("message", (json) => {
             const message = JSON.parse(json.toString());
@@ -201,11 +282,16 @@ describe("FrusterWebBus", () => {
             expect(message.data.some).toBe(message.data.some);
             expect(message.subject).toBe(message.subject);
 
-            done();
+            wsGotMessage = true;
         });
 
-        ws.on("close", () => {
-            done.fail();
+        ws2.on("message", (json) => {
+            ws2GotMessage = true;
+
+            if (wsGotMessage && ws2GotMessage)
+                done();
+            else
+                done.fail();
         });
 
         setTimeout(() => {
@@ -225,7 +311,7 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("close", () => {
-            done.fail();
+            done.fail("websocket closed");
         });
 
         ws.on("message", (json) => {
@@ -269,8 +355,9 @@ describe("FrusterWebBus", () => {
             headers: { cookie: "jwt=hello" }
         });
 
-        ws.on("close", () => {
-            done.fail();
+        ws.on("close", (a, b, c, d) => {
+            console.log(a, b, c, d);
+            done.fail("websocket closed");
         });
 
         ws.on("message", (json) => {
@@ -312,7 +399,7 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("close", () => {
-            done.fail();
+            done.fail("websocket closed");
         });
 
         ws.on("message", (json) => {
@@ -351,7 +438,7 @@ describe("FrusterWebBus", () => {
         ws.on("open", async () => {
             await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
                 reqId: "hello",
-                data: { jwt: "test-token" }
+                data: { jwt: "hello" }
             });
         });
 
