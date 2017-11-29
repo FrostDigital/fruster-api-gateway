@@ -128,7 +128,7 @@ describe("FrusterWebBus", () => {
         registerMockAuthServiceResponse();
 
         const ws = new WebSocket(webSocketBaseUri, [], {
-            headers: { Authorization: "hello" }
+            headers: { Authorization: "Bearer hello" }
         });
 
         ws.on("message", json => {
