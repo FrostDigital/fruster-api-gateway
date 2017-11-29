@@ -105,7 +105,7 @@ describe("FrusterWebBus", () => {
 
             expect(message.reqId).toBe(messageToSend.reqId);
             expect(message.data.some).toBe(messageToSend.data.some);
-            expect(message.subject).toBeDefined("ws.hello-there-id.hello");
+            expect(message.subject).toBeDefined("ws.out.hello-there-id.hello");
 
             done();
         });
@@ -115,7 +115,7 @@ describe("FrusterWebBus", () => {
         });
 
         setTimeout(() => {
-            bus.request("ws.hello-there-id.hello", messageToSend);
+            bus.request("ws.out.hello-there-id.hello", messageToSend);
         }, 100);
     });
 
@@ -136,7 +136,7 @@ describe("FrusterWebBus", () => {
 
             expect(message.reqId).toBe(messageToSend.reqId);
             expect(message.data.some).toBe(messageToSend.data.some);
-            expect(message.subject).toBeDefined("ws.hello-there-id.hello");
+            expect(message.subject).toBeDefined("ws.out.hello-there-id.hello");
 
             done();
         });
@@ -146,7 +146,7 @@ describe("FrusterWebBus", () => {
         });
 
         setTimeout(() => {
-            bus.request("ws.hello-there-id.hello", messageToSend);
+            bus.request("ws.out.hello-there-id.hello", messageToSend);
         }, 100);
     });
 
@@ -175,8 +175,8 @@ describe("FrusterWebBus", () => {
             expect(message.data.some).not.toBe(messageNotToReceive.data.some);
             expect(message.data.some).toBe(messageToReceive.data.some);
 
-            expect(message.subject).not.toBe("ws.hello2-there-id.hello");
-            expect(message.subject).toBe("ws.hello-there-id.hello");
+            expect(message.subject).not.toBe("ws.out.hello2-there-id.hello");
+            expect(message.subject).toBe("ws.out.hello-there-id.hello");
 
             done();
         });
@@ -186,8 +186,8 @@ describe("FrusterWebBus", () => {
         });
 
         setTimeout(() => {
-            bus.request("ws.hello2-there-id.hello", messageNotToReceive)
-                .then(() => bus.request("ws.hello-there-id.hello", messageToReceive));
+            bus.request("ws.out.hello2-there-id.hello", messageNotToReceive)
+                .then(() => bus.request("ws.out.hello-there-id.hello", messageToReceive));
         }, 100);
     });
 
@@ -221,7 +221,7 @@ describe("FrusterWebBus", () => {
         });
 
         setTimeout(() => {
-            bus.request("ws.*.hello", req);
+            bus.request("ws.out.*.hello", req);
         }, 100);
     });
 
@@ -277,7 +277,7 @@ describe("FrusterWebBus", () => {
         ws.on("message", (json) => {
             const message = JSON.parse(json.toString());
 
-            expect(message.subject).toBe("ws.hello-there-id.new-message");
+            expect(message.subject).toBe("ws.out.hello-there-id.new-message");
             expect(message.reqId).toBe(message.reqId);
             expect(message.data.some).toBe(message.data.some);
             expect(message.subject).toBe(message.subject);
@@ -295,7 +295,7 @@ describe("FrusterWebBus", () => {
         });
 
         setTimeout(() => {
-            bus.request("ws.*.new-message", message);
+            bus.request("ws.out.*.new-message", message);
         }, 100);
     });
 
@@ -412,7 +412,7 @@ describe("FrusterWebBus", () => {
 
         setTimeout(() => {
             ws.send(new Buffer(JSON.stringify({
-                subject: "ws.hello",
+                subject: "ws.out.hello",
                 message: {
                     reqId: reqId,
                     data: {}

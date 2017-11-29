@@ -36,7 +36,7 @@ module.exports = {
   webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
 
   // Subject for web sockets
-  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.*.>",
+  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.out.:userId.>",
 
   // Interceptor are named INTERCEPTOR_N where N is a number indicating in which 
   // order the interceptor will run. Is defined in syntax `<subject pattern to intercept>:<interceptor subject>`
