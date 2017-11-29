@@ -348,7 +348,7 @@ describe("API Gateway", () => {
             });
         });
 
-        doFormDataRequest('/foo?hej=1', function (error, response, respBody) {
+        doFormDataRequest("/foo?hej=1", function (error, response, respBody) {
             let body = JSON.parse(respBody);
             expect(body.status).toBe(200);
             expect(body.reqId).toBe(checkForReqId);
@@ -378,7 +378,7 @@ describe("API Gateway", () => {
             });
         });
 
-        doFormDataRequest('/foo', function (error, response, respBody) {
+        doFormDataRequest("/foo", function (error, response, respBody) {
             let body = JSON.parse(respBody);
 
             expect(response.statusCode).toBe(500);

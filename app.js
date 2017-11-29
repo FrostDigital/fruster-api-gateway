@@ -1,7 +1,7 @@
 const conf = require("./conf");
 const log = require("fruster-log");
 const apiGateway = require("./api-gateway");
-const FrusterWebBus = require('./lib/web-bus/FrusterWebBus');
+const FrusterWebBus = require("./lib/web-bus/FrusterWebBus");
 
 require("fruster-health").start();
 

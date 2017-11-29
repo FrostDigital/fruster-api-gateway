@@ -204,7 +204,8 @@ describe("FrusterWebBus", () => {
 
     it("should be possible to send message to server via web bus", async done => {
         const reqId = uuid.v4();
-        const responseText = "This is not the response you are looking for: ";
+        const transactionId = uuid.v4();
+        const userId = "BOB";
 
         registerMockAuthServiceResponse();
 
@@ -223,15 +224,17 @@ describe("FrusterWebBus", () => {
             expect(response.data).toBeDefined("response.data");
             expect(response.data.hello).toBe("hello BOB", "response.data.hello");
             expect(response.reqId).toBe(reqId, "response.reqId");
+            expect(response.subject).toBe(`res.${transactionId}.${wsEndpointSubject.replace(":userId", userId)}`);
 
             done();
         });
 
         setTimeout(() => {
             ws.send(new Buffer(JSON.stringify({
-                subject: wsEndpointSubject.replace(":userId", "BOB"),
+                subject: wsEndpointSubject.replace(":userId", userId),
                 message: {
                     reqId: reqId,
+                    transactionId: transactionId,
                     data: {
                         customMessage: "1337"
                     }
@@ -341,6 +344,7 @@ describe("FrusterWebBus", () => {
         } catch (err) {
             expect(err.error.code).toBe("BAD_REQUEST", "err.error.code");
             expect(err.status).toBe(400, "err.status");
+            expect(err.reqId).toBeDefined("err.reqId");
 
             done();
         }
