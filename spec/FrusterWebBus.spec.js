@@ -295,7 +295,7 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("open", async () => {
-            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+            await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
                 reqId: "hello",
                 data: { jwt: "test-token" }
             });
@@ -317,7 +317,7 @@ describe("FrusterWebBus", () => {
         });
 
         ws.on("open", async () => {
-            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+            await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
                 reqId: "hello",
                 data: { userId: mockUserId }
             });
@@ -327,7 +327,7 @@ describe("FrusterWebBus", () => {
 
     it("should return ok if client could not be found", async done => {
         try {
-            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+            await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
                 reqId: "hello",
                 data: { userId: "ram-jam" }
             });
@@ -341,7 +341,7 @@ describe("FrusterWebBus", () => {
 
     it("should require userId or jwtToken when unregistering client", async done => {
         try {
-            await bus.request(webBus.endpoints.UNREGISTER_CLIENT, {
+            await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
                 reqId: "hello",
                 data: { ram: mockUserId }
             });

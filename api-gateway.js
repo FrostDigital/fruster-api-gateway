@@ -132,12 +132,23 @@ function decodeToken(httpReq, reqId) {
                 message: decodeReq
             })
             .then(resp => resp.data)
-            .catch(err => {
+            .catch(async err => {
                 if (err.status == 401 || err.status == 403) {
                     log.debug("Failed to decode token (got error " + err.code + ") will expire cookie if present");
                     err.headers = err.headers || {};
                     err.headers["Set-Cookie"] = "jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                 }
+
+                // If jwt token failed to be decoded, we should unregister any clients connected to that jwt token
+                bus.request({
+                    skipOptionsRequest: true,
+                    subject: "fruster-web-bus.unregister-client",
+                    message: {
+                        reqId: reqId,
+                        data: { jwt: encodedToken }
+                    }
+                })
+
                 throw err;
             });
     }
