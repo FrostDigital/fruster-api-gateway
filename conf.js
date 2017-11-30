@@ -32,8 +32,8 @@ module.exports = {
 
   authCookieName: process.env.AUTH_COOKIE_NAME || "jwt",
 
-  // User scopes required to connect to the fruster web bus
-  webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
+  // Whether or not to allow public  users(without a fruster account) to connect via websocket. 
+  allowPublicWebsocketConnections: parseBool(process.env.ALLOW_PUBLIC_WEBSOCKET_CONNECTIONS, true),
 
   // Subject for web sockets
   webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.out.:userId.>",

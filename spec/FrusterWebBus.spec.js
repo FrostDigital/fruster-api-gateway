@@ -90,6 +90,11 @@ describe("FrusterWebBus", () => {
         }
     });
 
+    afterEach((done) => {
+        conf.allowPublicWebsocketConnections = true;
+        done();
+    });
+
     function registerMockAuthServiceResponse() {
         bus.subscribe({
             subject: "auth-service.decode-token",
@@ -99,13 +104,13 @@ describe("FrusterWebBus", () => {
                         id: mockUserId,
                         firstName: "bob",
                         lastName: "fred",
-                        scopes: conf.webSocketPermissionScope
+                        scopes: ["profile.get"]
                     },
                     hello2: {
                         id: mockUserId2,
                         firstName: "bob",
                         lastName: "fred",
-                        scopes: conf.webSocketPermissionScope
+                        scopes: ["profile.get"]
                     }
                 };
 
@@ -570,6 +575,23 @@ describe("FrusterWebBus", () => {
             });
         });
 
+    });
+
+    it("should not be possible to connect to websocket as public user if allowPublicWebsocketConnections is set to false", async done => {
+        conf.allowPublicWebsocketConnections = false;
+        const reqId = uuid.v4();
+
+        registerMockAuthServiceResponse();
+
+        const ws = new WebSocket(webSocketBaseUri, [], {
+            headers: {}
+        });
+
+        ws.on("close", (code, reason) => {
+            conf.allowPublicWebsocketConnections = true;
+            expect(reason).toBe(constants.websocketErrorCodes.PERMISSION_DENIED, "reason");
+            done();
+        });
     });
 
     it("should return ok if client could not be found", async done => {
