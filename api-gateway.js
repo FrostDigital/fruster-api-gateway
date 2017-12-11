@@ -56,41 +56,26 @@ app.get("/health", function (req, res) {
     });
 });
 
-// app.use(async (httpReq, httpRes, next) => {
-//     const reqId = uuid.v4();
-//     const reqStartTime = Date.now();
-
-//     logRequest(reqId, httpReq);
-    
-//     try {
-//         // Decode JWT token (provided as cookie or in header) if route is not public
-//         let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
-        
-//         // Translate http request to bus request and post it internally on bus
-//         const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
-        
-//         logResponse(reqId, internalRes, reqStartTime);
-        
-//         // Translate bus response to a HTTP response and send back to user
-//         sendHttpReponse(reqId, internalRes, httpRes);
-//     } catch(err) {
-//         handleError(err, httpRes, reqId, reqStartTime);
-//     }
-// });
-
-app.use((httpReq, httpRes, next) => {
+app.use(async (httpReq, httpRes, next) => {
     const reqId = uuid.v4();
     const reqStartTime = Date.now();
 
     logRequest(reqId, httpReq);
-
-    decodeToken(httpReq, reqId)
-        .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
-        .then(internalRes => {
-            logResponse(reqId, internalRes, reqStartTime);
-            return sendHttpReponse(reqId, internalRes, httpRes);
-        })
-        .catch(err => handleError(err, httpRes, reqId, reqStartTime));
+    
+    try {
+        // Decode JWT token (provided as cookie or in header) if route is not public
+        let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
+        
+        // Translate http request to bus request and post it internally on bus
+        const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
+        
+        logResponse(reqId, internalRes, reqStartTime);
+        
+        // Translate bus response to a HTTP response and send back to user
+        sendHttpReponse(reqId, internalRes, httpRes);
+    } catch(err) {
+        handleError(err, httpRes, reqId, reqStartTime);
+    }
 });
 
 app.use((err, req, res, next) => {
@@ -190,7 +175,7 @@ function invokeRequestInterceptors(subject, message) {
         return bus.request({
             subject: interceptor.targetSubject,
             message: _message,
-            skipOptionsRequest: true,
+            skipOptionsRequest: true
         });
     }, message);
 }
