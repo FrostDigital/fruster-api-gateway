@@ -14,7 +14,6 @@ const utils = require("./utils");
 const uuid = require("uuid");
 const bearerToken = require("express-bearer-token");
 const request = require("request");
-const Minimatch = require("minimatch").Minimatch;
 const Promise = require("bluebird");
 const util = require("util");
 
@@ -57,19 +56,26 @@ app.get("/health", function (req, res) {
     });
 });
 
-app.use((httpReq, httpRes, next) => {
+app.use(async (httpReq, httpRes, next) => {
     const reqId = uuid.v4();
     const reqStartTime = Date.now();
 
     logRequest(reqId, httpReq);
-
-    decodeToken(httpReq, reqId)
-        .then(decodedToken => sendInternalRequest(httpReq, reqId, decodedToken))
-        .then(internalRes => {
-            logResponse(reqId, internalRes, reqStartTime);
-            return sendHttpReponse(reqId, internalRes, httpRes);
-        })
-        .catch(err => handleError(err, httpRes, reqId, reqStartTime));
+    
+    try {
+        // Decode JWT token (provided as cookie or in header) if route is not public
+        let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
+        
+        // Translate http request to bus request and post it internally on bus
+        const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
+        
+        logResponse(reqId, internalRes, reqStartTime);
+        
+        // Translate bus response to a HTTP response and send back to user
+        sendHttpReponse(reqId, internalRes, httpRes);
+    } catch(err) {
+        handleError(err, httpRes, reqId, reqStartTime);
+    }
 });
 
 app.use((err, req, res, next) => {
@@ -112,8 +118,10 @@ function handleError(err, httpRes, reqId, reqStartTime) {
         .json(err);
 }
 
-/*
+/**
  * Token comes either in cookie or in header Authorization: Bearer <token>
+ * 
+ * @return {Promise}
  */
 function decodeToken(httpReq, reqId) {
     const encodedToken = getToken(httpReq);
@@ -125,18 +133,33 @@ function decodeToken(httpReq, reqId) {
         };
 
         return bus
-            .request("auth-service.decode-token", decodeReq)
+            .request({
+                skipOptionsRequest: true,
+                subject: "auth-service.decode-token",
+                message: decodeReq
+            })
             .then(resp => resp.data)
-            .catch(err => {
+            .catch(async err => {
                 if (err.status == 401 || err.status == 403) {
                     log.debug("Failed to decode token (got error " + err.code + ") will expire cookie if present");
                     err.headers = err.headers || {};
                     err.headers["Set-Cookie"] = "jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                 }
+
+                // If jwt token failed to be decoded, we should unregister any clients connected to that jwt token
+                bus.request({
+                    skipOptionsRequest: true,
+                    subject: "fruster-web-bus.unregister-client",
+                    message: {
+                        reqId: reqId,
+                        data: { jwt: encodedToken }
+                    }
+                })
+
                 throw err;
             });
     }
-
+    //@ts-ignore
     return Promise.resolve({});
 }
 
@@ -149,7 +172,11 @@ function invokeRequestInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true,
+        });
     }, message);
 }
 
@@ -162,16 +189,19 @@ function invokeResponseInterceptors(subject, message) {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
         }
-        return bus.request(interceptor.targetSubject, _message);
+        return bus.request({
+            subject: interceptor.targetSubject,
+            message: _message,
+            skipOptionsRequest: true,
+        });
     }, message);
 }
 
 function getToken(httpReq) {
     let token;
-
     if (httpReq.token) {
         token = httpReq.token;
-    } else if (httpReq.cookies[conf.authCookieName]) {
+    } else if (httpReq.cookies[conf.authCookieName] && httpReq.cookies[conf.authCookieName].toLowerCase() !== "deleted") {
         token = httpReq.cookies[conf.authCookieName];
     }
 
@@ -335,27 +365,21 @@ function isMultipart(httpReq) {
     return httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart");
 }
 
-// function initInterceptors() {    
-//     interceptors = conf.interceptors.map(interceptor => {
-//         let split = interceptor.split(":"); 
-//         const patternSplit = split[0].split(",");
-//         const targetSubject = split[1];
-
-//         return {
-//             pattern: split[0],
-//             targetSubject: targetSubject,
-//             matchers: patternSplit.map(pattern => new Minimatch(pattern))
-//         };
-//     });
-
-//     log.info(`Initialized ${interceptors.length} interceptor(s)`); 
-// }
+/**
+ * Checks if request is a public route and hence not needed to 
+ * decode cookie or token.
+ * 
+ * @param {Object} req 
+ */
+function isPublicRoute(req) {
+    return conf.publicRoutes.includes(req.path);
+}
 
 module.exports = {
     start: function (httpServerPort, busAddress) {
 
-        let startHttpServer = new Promise(function (resolve, reject) {
-            let server = http.createServer(app)
+        const startHttpServer = new Promise((resolve, reject) => {
+            const server = http.createServer(app)
                 .listen(httpServerPort);
 
             server.on("error", reject);
@@ -368,7 +392,7 @@ module.exports = {
             return resolve(server);
         });
 
-        let connectToBus = function () {
+        const connectToBus = () => {
             return bus.connect(busAddress);
         };
 
