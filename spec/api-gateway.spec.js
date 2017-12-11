@@ -140,117 +140,153 @@ describe("API Gateway", () => {
         });
     });
 
-    it("should return 403 if validation of JWT cookie failed", (done) => {
-        bus.subscribe("auth-service.decode-token", (req) => {
-            return {
-                status: 403,
-                error: {
-                    code: "auth-service.403.1"
-                }
-            };
+    describe("Tokens", () => {
+
+        it("should return 403 if validation of JWT cookie failed", (done) => {
+            bus.subscribe("auth-service.decode-token", (req) => {
+                return {
+                    status: 403,
+                    error: {
+                        code: "auth-service.403.1"
+                    }
+                };
+            });
+    
+            get("/foo", {
+                cookie: "jwt=acookie"
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(403);
+                expect(body.error.code).toBe("auth-service.403.1");
+                done();
+            });
+        });
+    
+        it("should return 403 if validation of JWT in auth header failed", (done) => {
+            bus.subscribe("auth-service.decode-token", (req) => {
+                expect(req.data).toBe("a-token");
+                return {
+                    status: 403,
+                    error: {
+                        code: "auth-service.403.1"
+                    }
+                };
+            });
+    
+            get("/foo", {
+                authorization: "Bearer a-token"
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(403);
+                expect(body.error.code).toBe("auth-service.403.1");
+                done();
+            });
+        });
+    
+        it("should set user data with decoded jwt cookie", (done) => {
+            bus.subscribe("auth-service.decode-token", (req) => {
+                expect(req.data).toBe("acookie");
+                return {
+                    status: 200,
+                    data: "decoded-cookie"
+                };
+            });
+    
+            bus.subscribe("http.get.foo", (req) => {
+                expect(req.user).toBe("decoded-cookie");
+                return {
+                    status: 200,
+                    data: {
+                        foo: "bar"
+                    }
+                };
+            });
+    
+            get("/foo", {
+                cookie: "jwt=acookie"
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(200);
+                expect(body.user).toBeUndefined();
+                done();
+            });
+        });
+    
+        it("should not decode token if route is public", (done) => {
+            let authServiceWasInvoked = false;
+
+            bus.subscribe("auth-service.decode-token", (req) => {
+                authServiceWasInvoked = true;
+                done.fail("Auth service should not have been invoked");
+                return {
+                    status: 200,
+                    data: "decoded-cookie"
+                };
+            });
+    
+            bus.subscribe("http.get.auth.cookie", (req) => {
+                expect(req.user).toEqual({});
+                return {
+                    status: 200,
+                    data: {
+                        foo: "bar"
+                    }
+                };
+            });
+    
+            get("/auth/cookie", {
+                cookie: "jwt=acookie"
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(200);
+                expect(body.user).toBeUndefined();
+                done();
+            });
+        });
+    
+        it("should not try to decode token if none is present", (done) => {
+            bus.subscribe("http.get.foo", (req) => {
+                return {
+                    status: 200,
+                    data: {
+                        foo: "bar"
+                    }
+                };
+            });
+    
+            get("/foo", (error, response, body) => {
+                expect(response.statusCode).toBe(200);
+                expect(body.user).toBeUndefined();
+                done();
+            });
+        });
+    
+        it("should set user data with decoded jwt cookie", (done) => {
+            bus.subscribe("auth-service.decode-token", (req) => {
+                expect(req.data).toBe("acookie");
+                return {
+                    status: 200,
+                    data: "decoded-cookie"
+                };
+            });
+    
+            bus.subscribe("http.get.foo", (req) => {
+                expect(req.user).toBe("decoded-cookie");
+                return {
+                    status: 200,
+                    data: {
+                        foo: "bar"
+                    }
+                };
+            });
+    
+            get("/foo", {
+                cookie: "jwt=acookie"
+            }, (error, response, body) => {
+                expect(response.statusCode).toBe(200);
+                expect(body.user).toBeUndefined();
+                done();
+            });
         });
 
-        get("/foo", {
-            cookie: "jwt=acookie"
-        }, (error, response, body) => {
-            expect(response.statusCode).toBe(403);
-            expect(body.error.code).toBe("auth-service.403.1");
-            done();
-        });
     });
 
-    it("should return 403 if validation of JWT in auth header failed", (done) => {
-        bus.subscribe("auth-service.decode-token", (req) => {
-            expect(req.data).toBe("a-token");
-            return {
-                status: 403,
-                error: {
-                    code: "auth-service.403.1"
-                }
-            };
-        });
-
-        get("/foo", {
-            authorization: "Bearer a-token"
-        }, (error, response, body) => {
-            expect(response.statusCode).toBe(403);
-            expect(body.error.code).toBe("auth-service.403.1");
-            done();
-        });
-    });
-
-    it("should set user data with decoded jwt cookie", (done) => {
-        bus.subscribe("auth-service.decode-token", (req) => {
-            expect(req.data).toBe("acookie");
-            return {
-                status: 200,
-                data: "decoded-cookie"
-            };
-        });
-
-        bus.subscribe("http.get.foo", (req) => {
-            expect(req.user).toBe("decoded-cookie");
-            return {
-                status: 200,
-                data: {
-                    foo: "bar"
-                }
-            };
-        });
-
-        get("/foo", {
-            cookie: "jwt=acookie"
-        }, (error, response, body) => {
-            expect(response.statusCode).toBe(200);
-            expect(body.user).toBeUndefined();
-            done();
-        });
-    });
-
-    it("should set user data with decoded jwt in auth header", (done) => {
-        bus.subscribe("auth-service.decode-token", (req) => {
-            expect(req.data).toBe("a-token");
-            return {
-                status: 200,
-                data: "decoded-cookie"
-            };
-        });
-
-        bus.subscribe("http.get.foo", (req) => {
-            expect(req.user).toBe("decoded-cookie");
-            return {
-                status: 200,
-                data: {
-                    foo: "bar"
-                }
-            };
-        });
-
-        get("/foo", {
-            authorization: "Bearer a-token"
-        }, (error, response, body) => {
-            expect(response.statusCode).toBe(200);
-            expect(body.user).toBeUndefined();
-            done();
-        });
-    });
-
-    it("should not try to decode token if none is present", (done) => {
-        bus.subscribe("http.get.foo", (req) => {
-            return {
-                status: 200,
-                data: {
-                    foo: "bar"
-                }
-            };
-        });
-
-        get("/foo", (error, response, body) => {
-            expect(response.statusCode).toBe(200);
-            expect(body.user).toBeUndefined();
-            done();
-        });
-    });
 
     it("should set reqId in HTTP response even though none is returned from bus", (done) => {
         bus.subscribe("http.get.foo", (req) => {

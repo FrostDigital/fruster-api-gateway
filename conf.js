@@ -45,7 +45,10 @@ module.exports = {
 
   // Adds no cache headers (Cache-control, Pragma and Expires) to instruct
   // clients not to cache any responses. Etags will be used by default.
-  noCache: process.env.NO_CACHE === "true"
+  noCache: process.env.NO_CACHE === "true",
+
+  // Public routes that if hit, will not attempt to decode cookie/token even though it exists
+  publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(",")
 
 };
 
