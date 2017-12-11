@@ -32,6 +32,9 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-1",
+            expectRequest: (req) => {                
+                expect(req.transactionId).toBeDefined("transactionId should be set");
+            },
             response: (resp) => {
                 resp.status = 200;
                 resp.interceptor1 = true;
@@ -42,6 +45,9 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-2",
+            expectRequest: (req) => {                
+                expect(req.transactionId).toBeDefined("transactionId should be set");
+            },
             response: (resp) => {
                 resp.interceptor2 = true;
                 resp.data.wasHere = "interceptor-2";
@@ -63,6 +69,7 @@ describe("Interceptors", function () {
                 expect(req.data.wasHere).toBe("interceptor-2");
                 expect(req.interceptor1).toBeTruthy("req.interceptor1");
                 expect(req.interceptor2).toBeTruthy("req.interceptor2");
+                expect(req.transactionId).toBeDefined();
             }
         });
 
