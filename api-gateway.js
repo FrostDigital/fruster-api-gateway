@@ -72,7 +72,7 @@ app.use(async (httpReq, httpRes, next) => {
         logResponse(reqId, internalRes, reqStartTime);
         
         // Translate bus response to a HTTP response and send back to user
-        sendHttpReponse(reqId, internalRes, httpRes);
+        sendHttpResponse(reqId, internalRes, httpRes);
     } catch(err) {
         handleError(err, httpRes, reqId, reqStartTime);
     }
@@ -294,7 +294,7 @@ function sendInternalBusRequest(subject, message) {
     return bus.request(subject, message, ms(conf.busTimeout));
 }
 
-function sendHttpReponse(reqId, internalRes, httpRes) {
+function sendHttpResponse(reqId, internalRes, httpRes) {
     log.silly(internalRes.data);
 
     setRequestId(reqId, internalRes);
