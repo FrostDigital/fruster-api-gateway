@@ -79,6 +79,34 @@ describe("API Gateway", () => {
 
     });
 
+    it("should create and recieve bus message for HTTP GET that includes dot in path", (done) => {
+        bus.subscribe("http.get.foo.:paramWithDot.foo", (req) => {
+            expect(req.path).toBe("/foo/foo.bar/foo");
+            expect(req.method).toBe("GET");
+            expect(req.reqId).toBeDefined();
+            // TODO: Update this when fruster-bus rewrites into dots
+            expect(req.params.paramWithDot).toBe("foo{dot}bar");            
+
+            return {
+                status: 200,
+                headers: {
+                    "A-Header": "foo"
+                },
+                data: {
+                    foo: "bar"
+                }
+            };
+        });
+
+        get("/foo/foo.bar/foo", (error, response, body) => {
+            expect(response.statusCode).toBe(200);            
+            expect(body.data.foo).toBe("bar");            
+
+            done();
+        });
+
+    });
+
     it("should get no cache headers on HTTP response when NO_CACHE is true", (done) => {
         conf.noCache = true;
 
