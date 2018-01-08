@@ -1,10 +1,13 @@
-var uuid = require("uuid");
+const uuid = require("uuid");
+
+const ESCAPE_DOTS_REGEPX = /\./g; 
 
 module.exports = {
 
   createSubject: req => {
-    var method = req.method;
-    var path = req.path.split("/");
+    const method = req.method;
+    const path = req.path.replace(ESCAPE_DOTS_REGEPX, "{dot}").split("/");
+  
     return ["http", method]
       .concat(path)
       .filter(function (val) {
@@ -14,7 +17,7 @@ module.exports = {
   },
 
   createRequest: (req, reqId, user) => {
-    var o = {
+    let o = {
       reqId: reqId,
       method: req.method,
       path: req.path,
@@ -24,7 +27,7 @@ module.exports = {
     };
 
     if (user) {
-      o.user = user;
+      o.user = user;  
     }
 
     return o;
