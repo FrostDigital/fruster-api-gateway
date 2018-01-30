@@ -81,8 +81,7 @@ describe("FrusterWebBus", () => {
             });
 
         },
-        mockNats: true,
-        bus: bus,
+        mockNats: true,        
         afterStart: (connection) => {
             webBus = new FrusterWebBus(server, {
                 test: true

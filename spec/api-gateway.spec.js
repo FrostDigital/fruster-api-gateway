@@ -31,7 +31,6 @@ describe("API Gateway", () => {
                 });
         },
         mockNats: true,
-        bus: bus,
         afterStart: (connection) => {
             new FrusterWebBus(server, {
                 test: true

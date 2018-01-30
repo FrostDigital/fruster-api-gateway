@@ -15,7 +15,7 @@
         "debug": "^2.6.9",
         "express": "^4.16.2",
         "express-bearer-token": "^2.1.0",
-        "fruster-bus": "^0.2.23",
+        "fruster-bus": "0.2.23",
         "fruster-health": "~0.0.12",
         "fruster-log": "0.0.15",
         "install": "^0.8.1",
@@ -30,7 +30,7 @@
         "ws": "^2.0.3"
     },
     "devDependencies": {
-        "fruster-test-utils": "^0.3.20",
+        "fruster-test-utils": "^0.3.21",
         "jasmine": "^2.7.0",
         "jasmine-spec-reporter": "^4.2.1",
         "multiparty": "^4.1.2",
