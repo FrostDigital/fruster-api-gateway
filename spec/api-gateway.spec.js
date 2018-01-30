@@ -83,9 +83,8 @@ describe("API Gateway", () => {
         bus.subscribe("http.get.foo.:paramWithDot.foo", (req) => {
             expect(req.path).toBe("/foo/foo.bar/foo");
             expect(req.method).toBe("GET");
-            expect(req.reqId).toBeDefined();
-            // TODO: Update this when fruster-bus rewrites into dots
-            expect(req.params.paramWithDot).toBe("foo{dot}bar");            
+            expect(req.reqId).toBeDefined();            
+            expect(req.params.paramWithDot).toBe("foo.bar");            
 
             return {
                 status: 200,
