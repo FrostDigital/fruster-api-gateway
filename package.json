@@ -15,7 +15,7 @@
         "debug": "^2.6.9",
         "express": "^4.16.2",
         "express-bearer-token": "^2.1.0",
-        "fruster-bus": "^0.2.20",
+        "fruster-bus": "0.2.20",
         "fruster-health": "~0.0.12",
         "fruster-log": "0.0.15",
         "install": "^0.8.1",
