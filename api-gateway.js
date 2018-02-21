@@ -15,7 +15,6 @@ const uuid = require("uuid");
 const bearerToken = require("express-bearer-token");
 const request = require("request");
 const Promise = require("bluebird");
-const util = require("util");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -47,6 +46,9 @@ app.use(bodyParser.urlencoded({
 app.use(cookieParser());
 app.use(bearerToken());
 
+app.get("/", function (req, res) {
+    res.send("API Gateway is up and running");
+});
 
 app.get("/health", function (req, res) {
     setNoCacheHeaders(res);
