@@ -19,8 +19,7 @@ volumes: [
       try {
         container('nodejs') {
           sh """
-            node -v
-            env
+            npm install
             npm test
             """
         }
@@ -32,9 +31,7 @@ volumes: [
     }
     stage('Build') {
       container('nodejs') {
-        sh """
-          env
-          node -v
+        sh """          
           npm install
             """
       }
