@@ -2,7 +2,6 @@ const interceptorConfig = require("../lib/interceptor-config");
 
 describe("Interceptor config", () => {
 	
-	
 	it("should parse config", () => {
 		const env = {
 			"INTERCEPTOR_1": "2;*;foo-service.interceptor-1;",
