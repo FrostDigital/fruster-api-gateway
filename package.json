@@ -1,41 +1,41 @@
 {
-    "name": "fruster-api-gateway",
-    "version": "0.0.4",
-    "private": true,
-    "scripts": {
-        "start": "node ./app.js",
-        "test": "node ./spec/support/jasmine-runner.js"
-    },
-    "dependencies": {
-        "bluebird": "^3.5.1",
-        "body-parser": "^1.18.2",
-        "connect-timeout": "^1.7.0",
-        "cookie-parser": "~1.4.3",
-        "cors": "^2.7.1",
-        "debug": "^2.6.9",
-        "express": "^4.16.2",
-        "express-bearer-token": "^2.1.0",
-        "fruster-bus": "0.2.26",
-        "fruster-health": "~0.0.12",
-        "fruster-log": "0.0.18",
-        "install": "^0.8.1",
-        "jade": "~1.11.0",
-        "lodash": "^4.16.2",
-        "ms": "^0.7.1",
-        "nats": "^0.6.4",
-        "node-http-client": "0.0.0",
-        "request": "^2.75.0",
-        "uuid": "^2.0.2",
-        "ws": "^2.0.3"
-    },
-    "devDependencies": {
-        "fruster-test-utils": "^0.3.22",
-        "jasmine": "^2.7.0",
-        "jasmine-spec-reporter": "^4.2.1",
-        "multiparty": "^4.1.2",
-        "request": "^2.74.0"
-    },
-    "engines": {
-        "node": "7.9.0"
-    }
+  "name": "fruster-api-gateway",
+  "version": "0.0.4",
+  "private": true,
+  "scripts": {
+    "start": "node ./app.js",
+    "test": "node ./spec/support/jasmine-runner.js"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "body-parser": "^1.18.2",
+    "connect-timeout": "^1.7.0",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.7.1",
+    "debug": "^2.6.9",
+    "express": "^4.16.2",
+    "express-bearer-token": "^2.1.0",
+    "fruster-bus": "0.2.26",
+    "fruster-health": "~0.0.12",
+    "fruster-log": "0.0.18",
+    "install": "^0.8.1",
+    "jade": "~1.11.0",
+    "lodash": "^4.16.2",
+    "ms": "^0.7.1",
+    "nats": "^0.6.4",
+    "node-http-client": "0.0.0",
+    "request": "^2.75.0",
+    "uuid": "^2.0.2",
+    "ws": "^2.0.3"
+  },
+  "devDependencies": {
+    "fruster-test-utils": "^0.3.22",
+    "jasmine": "^2.7.0",
+    "jasmine-spec-reporter": "^4.2.1",
+    "multiparty": "^4.1.2",
+    "request": "^2.74.0"
+  },
+  "engines": {
+    "node": "7.9.0"
+  }
 }
