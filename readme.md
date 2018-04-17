@@ -66,4 +66,4 @@ Configuration is set with environment variables. All config defaults to values t
 
 ## License
 
-This project is licensed under the terms of the MIT license
+This project is licensed under the terms of the MIT license.
