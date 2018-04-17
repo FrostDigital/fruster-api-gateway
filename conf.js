@@ -7,7 +7,7 @@ module.exports = {
 
   // Allow origin for CORS
   // Example: `*`, `http://www.example.com`,  `http://www.example.com,http://localhost:9000`
-  allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || '*',
+  allowOrigin: parseArray(process.env.ALLOW_ORIGIN) || "*",
 
   // Specify allowed headers for CORS, can be a comma separated string if multiple
   allowedHeaders: process.env.ALLOWED_HEADERS || "",
@@ -16,26 +16,27 @@ module.exports = {
   printStacktrace: parseBool(process.env.PRINT_STACKTRACE, true),
 
   // NATS servers, set multiple if using cluster
-  // Example: `['nats://10.23.45.1:4222', 'nats://10.23.41.8:4222']`
-  bus: parseArray(process.env.BUS) || ['nats://localhost:4222'],
+  // Example: `"nats://10.23.45.1:4222", "nats://10.23.41.8:4222"`
+  bus: process.env.BUS || "nats://localhost:4222",
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
-  maxRequestSize: process.env.MAX_REQUEST_SIZE ||  '100mb',
+  maxRequestSize: process.env.MAX_REQUEST_SIZE || "100mb",
 
-  httpTimeout: process.env.HTTP_TIMEOUT ||  '2s',
+  httpTimeout: process.env.HTTP_TIMEOUT || "2s",
 
-  busTimeout: process.env.BUS_TIMEOUT || '1s',
+  /**@type {String} */
+  busTimeout: process.env.BUS_TIMEOUT || "1s",
 
   unwrapMessageData: parseBool(process.env.UNWRAP_MESSAGE_DATA, false),
 
-  authCookieName: process.env.AUTH_COOKIE_NAME ||  'jwt',
+  authCookieName: process.env.AUTH_COOKIE_NAME || "jwt",
 
-  // User scopes required to connect to the fruster web bus
-  webSocketPermissionScope: parseArray(process.env.WEBSOCKET_PERMISSION_SCOPES) || ["websocket.connect.id"],
+  // Whether or not to allow public  users(without a fruster account) to connect via websocket. 
+  allowPublicWebsocketConnections: parseBool(process.env.ALLOW_PUBLIC_WEBSOCKET_CONNECTIONS, true),
 
   // Subject for web sockets
-  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.*.>",
+  webSocketSubject: process.env.WEBSOCKET_SUBJECT || "ws.out.:userId.>",
 
   // Interceptor are named INTERCEPTOR_N where N is a number indicating in which 
   // order the interceptor will run. Is defined in syntax `<subject pattern to intercept>:<interceptor subject>`
@@ -44,18 +45,20 @@ module.exports = {
 
   // Adds no cache headers (Cache-control, Pragma and Expires) to instruct
   // clients not to cache any responses. Etags will be used by default.
-  noCache: process.env.NO_CACHE === "true"
+  noCache: process.env.NO_CACHE === "true",
+
+  // Public routes that if hit, will not attempt to decode cookie/token even though it exists
+  publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(",")
 
 };
 
 function parseBool(str, defaultVal) {
-  return !str ? defaultVal : str === 'true';
+  return !str ? defaultVal : str === "true";
 }
 
 function parseArray(str) {
   if (str) {
-    return str.split(',');
+    return str.split(",");
   }
   return null;
 }
-
