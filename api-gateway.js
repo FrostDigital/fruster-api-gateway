@@ -15,6 +15,7 @@ const uuid = require("uuid");
 const bearerToken = require("express-bearer-token");
 const request = require("request");
 const Promise = require("bluebird");
+const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -63,19 +64,28 @@ app.use(async (httpReq, httpRes, next) => {
     const reqStartTime = Date.now();
 
     logRequest(reqId, httpReq);
-    
+
     try {
         // Decode JWT token (provided as cookie or in header) if route is not public
         let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
-        
+
+        const startTime = Date.now();
+
         // Translate http request to bus request and post it internally on bus
         const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
-        
+
+        const endTime = Date.now();
+
+        if (conf.enableStat) {
+            const responseTimeRepo = new ResponseTimeRepo();
+            responseTimeRepo.save(reqId, httpReq, (endTime - startTime));
+        }
+
         logResponse(reqId, internalRes, reqStartTime);
-        
+
         // Translate bus response to a HTTP response and send back to user
         sendHttpResponse(reqId, internalRes, httpRes);
-    } catch(err) {
+    } catch (err) {
         handleError(err, httpRes, reqId, reqStartTime);
     }
 });
@@ -154,7 +164,9 @@ function decodeToken(httpReq, reqId) {
                     subject: "fruster-web-bus.unregister-client",
                     message: {
                         reqId: reqId,
-                        data: { jwt: encodedToken }
+                        data: {
+                            jwt: encodedToken
+                        }
                     }
                 })
 

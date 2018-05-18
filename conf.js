@@ -19,6 +19,11 @@ module.exports = {
   // Example: `"nats://10.23.45.1:4222", "nats://10.23.41.8:4222"`
   bus: process.env.BUS || "nats://localhost:4222",
 
+  // Mongo database URL
+  mongoUrl: process.env.MONGO_URL || "mongodb://localhost:27017/fruster-api-gateway",
+
+  enableStat: parseBool(process.env.ENABLE_STAT, false),
+
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
   maxRequestSize: process.env.MAX_REQUEST_SIZE || "100mb",
@@ -48,7 +53,7 @@ module.exports = {
   noCache: process.env.NO_CACHE === "true",
 
   // Public routes that if hit, will not attempt to decode cookie/token even though it exists
-  publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(",")
+  publicRoutes: (process.env.PUBLIC_ROUTES ||  "/auth/cookie,/auth/token").split(",")
 
 };
 
