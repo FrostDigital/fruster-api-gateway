@@ -5,7 +5,7 @@ const FrusterWebBus = require("./lib/web-bus/FrusterWebBus");
 
 require("fruster-health").start();
 
-apiGateway.start(conf.port, conf.bus)
+apiGateway.start(conf.bus, conf.mongoUrl, conf.port)
 	.then(server => new FrusterWebBus(server))
 	.then(function () {
 		log.info("HTTP server started (listening on %s) and connected bus (%s)", conf.port, conf.bus);

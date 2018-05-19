@@ -1,0 +1,16 @@
+doctype html
+html
+  head
+    title= 'Response time statistics'
+  body
+    h1= 'Response time statistics'
+
+    table
+        tbody
+            each row in result
+                tr
+                    td= row.id
+                    td= row.subject
+                    td= row.status
+                    td= row.time
+                    td= row.createdAt
