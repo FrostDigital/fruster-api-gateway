@@ -1,16 +1,16 @@
 const request = require("request");
 const fs = require("fs");
-const conf = require("../conf");
 const bus = require("fruster-bus");
 const uuid = require("uuid");
-const apiGw = require("../api-gateway");
 const util = require("util");
 const multiparty = require("multiparty");
 const http = require("http");
 const express = require("express");
 const WebSocket = require("ws");
-const FrusterWebBus = require("../lib/web-bus/FrusterWebBus");
 const testUtils = require("fruster-test-utils");
+const conf = require("../conf");
+const apiGw = require("../api-gateway");
+const FrusterWebBus = require("../lib/web-bus/FrusterWebBus");
 
 describe("API Gateway", () => {
     let natsServer;
@@ -18,6 +18,7 @@ describe("API Gateway", () => {
     let webSocketBaseUri;
     let httpPort;
     let server;
+    const mongoUrl = `mongodb://localhost:27017/fruster-api-gateway-test`;
 
     testUtils.startBeforeEach({
         service: (connection) => {
@@ -25,7 +26,7 @@ describe("API Gateway", () => {
             baseUri = "http://127.0.0.1:" + httpPort;
             webSocketBaseUri = "ws://127.0.0.1:" + httpPort;
 
-            return apiGw.start(httpPort, connection.natsUrl)
+            return apiGw.start(connection.natsUrl, mongoUrl, httpPort)
                 .then(_server => {
                     server = _server
                 });
@@ -82,8 +83,8 @@ describe("API Gateway", () => {
         bus.subscribe("http.get.foo.:paramWithDot.foo", (req) => {
             expect(req.path).toBe("/foo/foo.bar/foo");
             expect(req.method).toBe("GET");
-            expect(req.reqId).toBeDefined();            
-            expect(req.params.paramWithDot).toBe("foo.bar");            
+            expect(req.reqId).toBeDefined();
+            expect(req.params.paramWithDot).toBe("foo.bar");
 
             return {
                 status: 200,
@@ -97,8 +98,8 @@ describe("API Gateway", () => {
         });
 
         get("/foo/foo.bar/foo", (error, response, body) => {
-            expect(response.statusCode).toBe(200);            
-            expect(body.data.foo).toBe("bar");            
+            expect(response.statusCode).toBe(200);
+            expect(body.data.foo).toBe("bar");
 
             done();
         });
@@ -177,7 +178,7 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/foo", {
                 cookie: "jwt=acookie"
             }, (error, response, body) => {
@@ -186,7 +187,7 @@ describe("API Gateway", () => {
                 done();
             });
         });
-    
+
         it("should return 403 if validation of JWT in auth header failed", (done) => {
             bus.subscribe("auth-service.decode-token", (req) => {
                 expect(req.data).toBe("a-token");
@@ -197,7 +198,7 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/foo", {
                 authorization: "Bearer a-token"
             }, (error, response, body) => {
@@ -206,7 +207,7 @@ describe("API Gateway", () => {
                 done();
             });
         });
-    
+
         it("should set user data with decoded jwt cookie", (done) => {
             bus.subscribe("auth-service.decode-token", (req) => {
                 expect(req.data).toBe("acookie");
@@ -215,7 +216,7 @@ describe("API Gateway", () => {
                     data: "decoded-cookie"
                 };
             });
-    
+
             bus.subscribe("http.get.foo", (req) => {
                 expect(req.user).toBe("decoded-cookie");
                 return {
@@ -225,7 +226,7 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/foo", {
                 cookie: "jwt=acookie"
             }, (error, response, body) => {
@@ -234,7 +235,7 @@ describe("API Gateway", () => {
                 done();
             });
         });
-    
+
         it("should not decode token if route is public", (done) => {
             let authServiceWasInvoked = false;
 
@@ -246,7 +247,7 @@ describe("API Gateway", () => {
                     data: "decoded-cookie"
                 };
             });
-    
+
             bus.subscribe("http.get.auth.cookie", (req) => {
                 expect(req.user).toEqual({});
                 return {
@@ -256,7 +257,7 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/auth/cookie", {
                 cookie: "jwt=acookie"
             }, (error, response, body) => {
@@ -265,7 +266,7 @@ describe("API Gateway", () => {
                 done();
             });
         });
-    
+
         it("should not try to decode token if none is present", (done) => {
             bus.subscribe("http.get.foo", (req) => {
                 return {
@@ -275,14 +276,14 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/foo", (error, response, body) => {
                 expect(response.statusCode).toBe(200);
                 expect(body.user).toBeUndefined();
                 done();
             });
         });
-    
+
         it("should set user data with decoded jwt cookie", (done) => {
             bus.subscribe("auth-service.decode-token", (req) => {
                 expect(req.data).toBe("acookie");
@@ -291,7 +292,7 @@ describe("API Gateway", () => {
                     data: "decoded-cookie"
                 };
             });
-    
+
             bus.subscribe("http.get.foo", (req) => {
                 expect(req.user).toBe("decoded-cookie");
                 return {
@@ -301,7 +302,7 @@ describe("API Gateway", () => {
                     }
                 };
             });
-    
+
             get("/foo", {
                 cookie: "jwt=acookie"
             }, (error, response, body) => {
@@ -339,12 +340,12 @@ describe("API Gateway", () => {
         post("/content-type-json", {
             "content-type": "application/vnd.contentful.management.v1+json"
         }, {
-                hello: 1337
-            }, (error, response, body) => {
-                expect(response.statusCode).toBe(200);
-                expect(body.reqId).toBeDefined();
-                done();
-            });
+            hello: 1337
+        }, (error, response, body) => {
+            expect(response.statusCode).toBe(200);
+            expect(body.reqId).toBeDefined();
+            done();
+        });
     });
 
     it("should forward POST request with multipart via http to url specified by bus.subscribe", (done) => {
