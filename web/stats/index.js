@@ -2,18 +2,36 @@ const mongo = require("mongodb");
 const conf = require("../../conf");
 const ResponseTimeRepo = require("../../lib/repos/ResponseTimeRepo");
 
-module.exports.get = async (req, res) => {
+let repo;
 
-    const repo = await getRepo();
+module.exports = {
+    index: async (req, res) => {
+        res.render("index");
+    },
 
-    const result = await repo.findByQuery();
+    search: async (req, res) => {
+        const repo = await getRepo();
 
-    res.render("index", {
-        result: result
-    });
+        let query = {};
+
+        if (req.query.q) {
+            query = {
+                subject: new RegExp(req.query.q)
+            };
+        }
+
+        const result = await repo.findByQuery(query);
+
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(result));
+    }
 }
 
 async function getRepo() {
-    const db = await mongo.connect(conf.mongoUrl);
-    return new ResponseTimeRepo(db);
+    if (!repo) {
+        const db = await mongo.connect(conf.mongoUrl);
+        repo = new ResponseTimeRepo(db);
+    }
+
+    return repo;
 }

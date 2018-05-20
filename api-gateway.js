@@ -67,7 +67,8 @@ app.get("/health", function (req, res) {
     });
 });
 
-app.get("/stats", statIndex.get);
+app.get("/stats", statIndex.index);
+app.get("/stats/search", statIndex.search);
 
 app.use(async (httpReq, httpRes, next) => {
     const reqId = uuid.v4();

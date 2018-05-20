@@ -2,15 +2,67 @@ doctype html
 html
   head
     title= 'Response time statistics'
-  body
-    h1= 'Response time statistics'
+    link(href= 'https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css', rel= "stylesheet")
+    style(type='text/css').
+      .pad20 {
+        padding-top: 20px;
+      }
 
-    table
-        tbody
-            each row in result
-                tr
-                    td= row.id
-                    td= row.subject
-                    td= row.status
-                    td= row.time
-                    td= row.createdAt
+
+  body
+    div(class="container")
+      div(class="row")
+        div(class="col")
+          h1= 'Response time statistics'
+
+      form(action="#")
+        div(class="row pad20")
+          div(class="col")
+            input(type="text", class="form-control", placeholder="Search", id="search")
+          div(class="col")
+            span(id="avg")
+          
+      div(class="row pad20")
+        div(class="col")
+          table(class="table table-striped table-hover", id="data-table")
+            thead
+              tr
+                th= "Subject"
+                th= "Status"
+                th= "Time (ms)"
+            tbody
+           
+
+    script(src="https://code.jquery.com/jquery-3.3.1.min.js")
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
+    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js")
+    script.
+      getRecords($("#search").val());
+
+      $("#search").keyup((e) => {
+        getRecords($(e.target).val());
+      });
+
+      function getRecords(value) {
+        $.getJSON("http://localhost:3000/stats/search?q=" + value, (data) => {
+          let trows = "";
+
+          let totalTime = 0;
+
+          data.forEach(row => {
+            trows += "<tr>"
+              + "<td>" + row.subject + "</td>"
+              + "<td>" + row.status + "</td>"
+              + "<td>" + row.time + "</td>"
+              + "</tr>";
+
+            totalTime += parseInt(row.time);
+          });
+
+          $("#data-table tbody").html(trows);
+
+          let avg = (totalTime / data.length).toFixed(2);
+
+          $("#avg").html("Average time - " +  avg + " ms");
+        });
+      }
