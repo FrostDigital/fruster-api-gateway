@@ -22,8 +22,7 @@ module.exports = {
 
         const result = await repo.findByQuery(query);
 
-        res.setHeader('Content-Type', 'application/json');
-        res.send(JSON.stringify(result));
+        res.json(result);
     }
 }
 

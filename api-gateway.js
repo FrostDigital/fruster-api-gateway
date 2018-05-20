@@ -16,7 +16,7 @@ const utils = require("./utils");
 const conf = require("./conf");
 const constants = require("./lib/constants");
 const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
-const statIndex = require("./web/stats/index");
+const statzIndex = require("./web/statz/index");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -52,8 +52,6 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(cookieParser());
 app.use(bearerToken());
-app.set('views', "./web/stats");
-app.set('view engine', 'pug');
 
 app.get("/", function (req, res) {
     res.send("API Gateway is up and running");
@@ -67,8 +65,13 @@ app.get("/health", function (req, res) {
     });
 });
 
-app.get("/stats", statIndex.index);
-app.get("/stats/search", statIndex.search);
+if (conf.enableStat) {
+    app.set('views', "./web/statz");
+    app.set('view engine', 'pug');
+
+    app.get("/statz", statzIndex.index);
+    app.get("/statz/search", statzIndex.search);
+}
 
 app.use(async (httpReq, httpRes, next) => {
     const reqId = uuid.v4();
@@ -410,9 +413,13 @@ function isPublicRoute(req) {
 module.exports = {
     start: async (busAddress, mongoUrl, httpServerPort) => {
 
-        const db = await mongo.connect(conf.mongoUrl);
+        if (conf.enableStat) {
+            const db = await mongo.connect(conf.mongoUrl);
 
-        responseTimeRepo = new ResponseTimeRepo(db);
+            responseTimeRepo = new ResponseTimeRepo(db);
+
+            createIndexes(db);
+        }
 
         const startHttpServer = new Promise((resolve, reject) => {
             const server = http.createServer(app)
@@ -431,8 +438,6 @@ module.exports = {
         const connectToBus = () => {
             return bus.connect(busAddress);
         };
-
-        createIndexes(db);
 
         return startHttpServer.then(server => connectToBus().then(() => server));
     },

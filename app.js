@@ -7,7 +7,7 @@ require("fruster-health").start();
 
 apiGateway.start(conf.bus, conf.mongoUrl, conf.port)
 	.then(server => new FrusterWebBus(server))
-	.then(function () {
+	.then(() => {
 		log.info("HTTP server started (listening on %s) and connected bus (%s)", conf.port, conf.bus);
 	})
 	.catch((err) => {

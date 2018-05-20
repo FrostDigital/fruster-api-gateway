@@ -33,9 +33,7 @@ html
             tbody
            
 
-    script(src="https://code.jquery.com/jquery-3.3.1.min.js")
-    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js")
-    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js")
+    script(src="https://code.jquery.com/jquery-3.3.1.min.js") 
     script.
       getRecords($("#search").val());
 
@@ -44,7 +42,7 @@ html
       });
 
       function getRecords(value) {
-        $.getJSON("http://localhost:3000/stats/search?q=" + value, (data) => {
+        $.getJSON("http://localhost:3000/statz/search?q=" + value, (data) => {
           let trows = "";
 
           let totalTime = 0;
