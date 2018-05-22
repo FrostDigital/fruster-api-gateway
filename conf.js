@@ -27,7 +27,7 @@ module.exports = {
   enableStat: parseBool(process.env.ENABLE_STAT, false),
 
   // Stats response time table TTL value by mili seconds. Default is 4 weeks
-  statsTTL: parseInt(process.env.STATS_TTL, ms("4w")) / 1000,
+  statsTTL: parseInt(ms(process.env.STATS_TTL || "4w") / 1000),
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
