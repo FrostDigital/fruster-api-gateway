@@ -14,13 +14,53 @@ module.exports = {
 
         let query = {};
 
-        if (req.query.q) {
-            query = {
-                subject: new RegExp(req.query.q)
+        if (req.query.subject) {
+            query.subject = {
+                $regex: ".*" + req.query.subject + ".*"
             };
         }
 
-        const result = await repo.findByQuery(query);
+        if (req.query.status) {
+            query["$where"] = "/^" + req.query.status + "/.test(this.status)"
+        }
+
+        let limit = 1000;
+
+        if (req.query.limit) {
+            limit = parseInt(req.query.limit);
+        }
+
+        let sort = {};
+
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case "CREATED_AT_DESC":
+                    sort = {
+                        createdAt: -1
+                    };
+                    break;
+
+                case "CREATED_AT_ASC":
+                    sort = {
+                        createdAt: 1
+                    };
+                    break;
+
+                case "TIME_DESC":
+                    sort = {
+                        time: -1
+                    };
+                    break;
+
+                case "TIME_ASC":
+                    sort = {
+                        time: 1
+                    };
+                    break;
+            }
+        }
+
+        const result = await repo.findByQuery(query, limit, sort);
 
         res.json(result);
     }

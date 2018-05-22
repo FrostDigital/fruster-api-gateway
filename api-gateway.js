@@ -450,6 +450,6 @@ function createIndexes(db) {
         .createIndex({
             "createdAt": 1
         }, {
-            expireAfterSeconds: 3600 * 24 * 30 //1 month
+            expireAfterSeconds: conf.indexExpireTime
         });
 }

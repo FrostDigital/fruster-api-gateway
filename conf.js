@@ -22,7 +22,11 @@ module.exports = {
   // Mongo database URL
   mongoUrl: process.env.MONGO_URL || "mongodb://localhost:27017/fruster-api-gateway",
 
+  // Enable stats module for response time
   enableStat: parseBool(process.env.ENABLE_STAT, false),
+
+  // Stats response time table TTL value by seconds. Default is 1 month
+  indexExpireTime: parseInt(process.env.INDEX_EXPIRE_TIME, 3600 * 24 * 30),
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
