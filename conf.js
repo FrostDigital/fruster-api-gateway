@@ -26,7 +26,7 @@ module.exports = {
   // Enable stats module for response time
   enableStat: parseBool(process.env.ENABLE_STAT, false),
 
-  // Stats response time table TTL value by seconds. Default is 4 weeks
+  // Stats response time table TTL value by mili seconds. Default is 4 weeks
   statsTTL: parseInt(process.env.STATS_TTL, ms("4w")) / 1000,
 
   // Max size of requests that we can handle
