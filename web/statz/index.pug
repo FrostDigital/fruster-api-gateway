@@ -57,6 +57,8 @@ html
 
     script(src="https://code.jquery.com/jquery-3.3.1.min.js") 
     script.
+      const baseURL = window.location.protocol + "//" + window.location.host;
+
       getRecords();
 
       $("#search").keyup(getRecords);
@@ -73,7 +75,7 @@ html
         const limit = $("#limit").val();
         const sort = $("#sort").val();
 
-        $.getJSON("http://localhost:3000/statz/search?subject=" + subject 
+        $.getJSON(baseURL + "/statz/search?subject=" + subject 
           + "&status="+ status + "&limit=" + limit + "&sort=" + sort, (data) => {
           let trows = "";
 
