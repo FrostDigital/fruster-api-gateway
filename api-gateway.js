@@ -450,6 +450,6 @@ function createIndexes(db) {
         .createIndex({
             "createdAt": 1
         }, {
-            expireAfterSeconds: conf.indexExpireTime
+            expireAfterSeconds: conf.statsTTL
         });
 }

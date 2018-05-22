@@ -1,4 +1,5 @@
 const interceptorConfig = require("./lib/interceptor-config");
+const ms = require("ms");
 
 module.exports = {
 
@@ -25,8 +26,8 @@ module.exports = {
   // Enable stats module for response time
   enableStat: parseBool(process.env.ENABLE_STAT, false),
 
-  // Stats response time table TTL value by seconds. Default is 1 month
-  indexExpireTime: parseInt(process.env.INDEX_EXPIRE_TIME, 3600 * 24 * 30),
+  // Stats response time table TTL value by seconds. Default is 4 weeks
+  statsTTL: parseInt(process.env.STATS_TTL, ms("4w") / 1000),
 
   // Max size of requests that we can handle
   // Examples: `1mb`, `100kb`
