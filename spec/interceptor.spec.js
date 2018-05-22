@@ -1,17 +1,18 @@
 const request = require("request");
 const bus = require("fruster-bus");
+const testUtils = require("fruster-test-utils");
 const conf = require("../conf");
 const apiGw = require("../api-gateway");
-const testUtils = require("fruster-test-utils");
 const interceptorConfig = require("../lib/interceptor-config");
 
 describe("Interceptors", function () {
 
     const httpPort = Math.floor(Math.random() * 6000 + 2000);
     const baseUri = "http://127.0.0.1:" + httpPort;
+    const mongoUrl = `mongodb://localhost:27017/fruster-api-gateway-test`;
 
     testUtils.startBeforeEach({
-        service: (connection) => apiGw.start(httpPort, connection.natsUrl),
+        service: (connection) => apiGw.start(connection.natsUrl, mongoUrl, httpPort),
         mockNats: true,
         bus: bus
     });
@@ -32,7 +33,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-1",
-            expectRequest: (req) => {                
+            expectRequest: (req) => {
                 expect(req.transactionId).toBeDefined("transactionId should be set");
             },
             response: (resp) => {
@@ -45,7 +46,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-2",
-            expectRequest: (req) => {                
+            expectRequest: (req) => {
                 expect(req.transactionId).toBeDefined("transactionId should be set");
             },
             response: (resp) => {

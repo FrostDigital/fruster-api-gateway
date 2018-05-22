@@ -1,24 +1,31 @@
 const express = require("express");
-const fs = require("fs");
-const _ = require("lodash");
+const mongo = require("mongodb");
 const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
-const conf = require("./conf");
-const bus = require("fruster-bus");
 const cors = require("cors");
 const http = require("http");
 const timeout = require("connect-timeout");
-const log = require("fruster-log");
 const ms = require("ms");
-const utils = require("./utils");
 const uuid = require("uuid");
+const bodyParser = require("body-parser");
 const bearerToken = require("express-bearer-token");
 const request = require("request");
 const Promise = require("bluebird");
+const log = require("fruster-log");
+const bus = require("fruster-bus");
+const utils = require("./utils");
+const conf = require("./conf");
+const constants = require("./lib/constants");
+const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
+const statzIndex = require("./web/statz/index");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
 const dateStarted = new Date();
+
+/**
+ * @type ResponseTimeRepo
+ */
+let responseTimeRepo;
 
 const interceptAction = {
     respond: "respond",
@@ -58,24 +65,48 @@ app.get("/health", function (req, res) {
     });
 });
 
+if (conf.enableStat) {
+    app.set('views', "./web/statz");
+    app.set('view engine', 'pug');
+
+    app.get("/statz", statzIndex.index);
+    app.get("/statz/search", statzIndex.search);
+}
+
 app.use(async (httpReq, httpRes, next) => {
     const reqId = uuid.v4();
     const reqStartTime = Date.now();
+    var startTime = reqStartTime;
+    let endTime;
 
     logRequest(reqId, httpReq);
-    
+
     try {
         // Decode JWT token (provided as cookie or in header) if route is not public
         let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
-        
+
+        startTime = Date.now();
+
         // Translate http request to bus request and post it internally on bus
         const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
-        
+
+        endTime = Date.now();
+
+        if (conf.enableStat) {
+            responseTimeRepo.save(reqId, httpReq, internalRes, (endTime - startTime));
+        }
+
         logResponse(reqId, internalRes, reqStartTime);
-        
+
         // Translate bus response to a HTTP response and send back to user
         sendHttpResponse(reqId, internalRes, httpRes);
-    } catch(err) {
+    } catch (err) {
+        endTime = Date.now();
+
+        if (conf.enableStat) {
+            responseTimeRepo.save(reqId, httpReq, err, (endTime - startTime));
+        }
+
         handleError(err, httpRes, reqId, reqStartTime);
     }
 });
@@ -154,7 +185,9 @@ function decodeToken(httpReq, reqId) {
                     subject: "fruster-web-bus.unregister-client",
                     message: {
                         reqId: reqId,
-                        data: { jwt: encodedToken }
+                        data: {
+                            jwt: encodedToken
+                        }
                     }
                 })
 
@@ -378,7 +411,15 @@ function isPublicRoute(req) {
 }
 
 module.exports = {
-    start: function (httpServerPort, busAddress) {
+    start: async (busAddress, mongoUrl, httpServerPort) => {
+
+        if (conf.enableStat) {
+            const db = await mongo.connect(conf.mongoUrl);
+
+            responseTimeRepo = new ResponseTimeRepo(db);
+
+            createIndexes(db);
+        }
 
         const startHttpServer = new Promise((resolve, reject) => {
             const server = http.createServer(app)
@@ -403,3 +444,12 @@ module.exports = {
 
     decodeToken: decodeToken
 };
+
+function createIndexes(db) {
+    db.collection(constants.collections.RESPONSE_TIME)
+        .createIndex({
+            "createdAt": 1
+        }, {
+            expireAfterSeconds: conf.statsTTL
+        });
+}
