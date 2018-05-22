@@ -58,7 +58,7 @@ module.exports = {
   noCache: process.env.NO_CACHE === "true",
 
   // Public routes that if hit, will not attempt to decode cookie/token even though it exists
-  publicRoutes: (process.env.PUBLIC_ROUTES ||  "/auth/cookie,/auth/token").split(",")
+  publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(",")
 
 };
 

@@ -17,6 +17,7 @@ const conf = require("./conf");
 const constants = require("./lib/constants");
 const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
 const statzIndex = require("./web/statz/index");
+const favicon = require("express-favicon");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -31,7 +32,7 @@ const interceptAction = {
     respond: "respond",
     next: "next"
 };
-
+app.use(favicon(__dirname + "/favicon.png"));
 app.use(cors({
     origin: conf.allowOrigin,
     credentials: true,
@@ -450,6 +451,6 @@ function createIndexes(db) {
         .createIndex({
             "createdAt": 1
         }, {
-            expireAfterSeconds: conf.statsTTL
-        });
+                expireAfterSeconds: conf.statsTTL
+            });
 }

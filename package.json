@@ -15,6 +15,7 @@
         "debug": "^3.1.0",
         "express": "^4.16.3",
         "express-bearer-token": "^2.1.1",
+        "express-favicon": "^2.0.1",
         "fruster-bus": "0.2.26",
         "fruster-health": "~0.0.12",
         "fruster-log": "0.0.18",
