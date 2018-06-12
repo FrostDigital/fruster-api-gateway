@@ -271,21 +271,32 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
 
             if (isMultipart(httpReq)) {
                 return sendInternalMultipartRequest(subject, interceptedReq, httpReq)
-                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
-                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
+                    .then(interceptResponse)
+                    .catch(interceptResponse);
             } else {
                 return sendInternalBusRequest(subject, interceptedReq)
-                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
-                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
+                    .then(interceptResponse)
+                    .catch(interceptResponse)
+
+                function interceptResponse(response) {
+                    if (response.error)
+                        response.data = interceptedReq.data;
+
+                    return invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
+                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
+                        .catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
+                }
             }
         });
 }
 
 function prepareInterceptResponseMessage(response, message) {
     const interceptMessage = Object.assign({}, response);
+
     interceptMessage.query = message.query;
     interceptMessage.params = message.params;
     interceptMessage.path = message.path;
+
     return interceptMessage;
 }
 
@@ -293,6 +304,14 @@ function cleanInterceptedResponse(response, interceptedResponse) {
     delete interceptedResponse.query;
     delete interceptedResponse.params;
     delete interceptedResponse.path;
+
+    /** If we get errors back we have the request data in the response as well */
+    if (response.error && interceptedResponse.error) {
+        delete interceptedResponse.data;
+        delete interceptedResponse.query;
+        delete interceptedResponse.path;
+    }
+
     return interceptedResponse;
 }
 
