@@ -216,9 +216,13 @@ function invokeRequestInterceptors(subject, message) {
     }, message);
 }
 
-function invokeResponseInterceptors(subject, message) {
+function invokeResponseInterceptors(subject, message, messageIsException) {
     const matchedInterceptors = conf.interceptors.filter(interceptor => {
-        return interceptor.type === "response" && interceptor.match(subject);
+        const typeIsResponse = interceptor.type === "response";
+        const subjectMatchesSubject = interceptor.match(subject);
+        const isNotExceptionOrConfiguredToAllowExceptions = !messageIsException ? true : !!interceptor.options.allowExceptions;
+
+        return typeIsResponse && subjectMatchesSubject && isNotExceptionOrConfiguredToAllowExceptions;
     });
 
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
@@ -272,17 +276,17 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
             if (isMultipart(httpReq)) {
                 return sendInternalMultipartRequest(subject, interceptedReq, httpReq)
                     .then(interceptResponse)
-                    .catch(interceptResponse);
+                    .catch(err => interceptResponse(err, true));
             } else {
                 return sendInternalBusRequest(subject, interceptedReq)
                     .then(interceptResponse)
-                    .catch(interceptResponse)
+                    .catch(err => interceptResponse(err, true));
 
-                function interceptResponse(response) {
+                function interceptResponse(response, messageIsException) {
                     if (response.error)
                         response.data = interceptedReq.data;
 
-                    return invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
+                    return invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message), messageIsException)
                         .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
                         .catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
                 }

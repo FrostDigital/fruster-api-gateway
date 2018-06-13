@@ -21,7 +21,8 @@ describe("Interceptors", function () {
         conf.interceptors = interceptorConfig({
             INTERCEPTOR_1: "1;http.*,!http.post.auth;interceptor-1",
             INTERCEPTOR_2: "2;*;interceptor-2",
-            INTERCEPTOR_3: "3;*;interceptor-response;response"
+            INTERCEPTOR_3: "3;*;interceptor-response;response;allow-exceptions",
+            INTERCEPTOR_4: "4;*;interceptor-response-2;response"
         });
     });
 
@@ -120,6 +121,110 @@ describe("Interceptors", function () {
             expect(body.data.helloThere).toBeUndefined();
             expect(response.statusCode).toBe(200);
             expect(body.status).toBe(200);
+            done();
+        });
+    });
+
+    it("should invoke response interceptor with exception if configured to allow exceptions", function (done) {
+
+        testUtils.mockService({
+            subject: "interceptor-1",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-2",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-response",
+            response: (resp) => {
+                expect(resp.query.hej).toBe("20", "should add query to intercept request");
+                resp.data.wasHere = "interceptor-response";
+                resp.status = 200;
+                delete resp.data.helloThere;
+                delete resp.error;
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "http.get.foo",
+            expectRequest: (req) => {
+                throw {
+                    status: 500,
+                    error: {
+                        code: "IMAGINARY_ERROR",
+                        title: "very real error!"
+                    }
+                }
+            }
+        });
+
+        get("/foo?hej=20", function (error, response, body) {
+            expect(body.data.wasHere).toBe("interceptor-response");
+            expect(body.data.helloThere).toBeUndefined();
+            expect(response.statusCode).toBe(200);
+            expect(body.status).toBe(200);
+            done();
+        });
+    });
+
+    it("should not invoke response interceptor with exception if not configured to allow exceptions", function (done) {
+
+        testUtils.mockService({
+            subject: "interceptor-1",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-2",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-response",
+            response: (resp) => {
+                throw {
+                    status: 500,
+                    error: {
+                        code: "IMAGINARY_ERROR",
+                        title: "very real error!"
+                    }
+                };
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-response-2",
+            response: (resp) => {
+                done.fail();
+            }
+        });
+
+        testUtils.mockService({
+            subject: "http.get.foo",
+            expectRequest: (req) => {
+                throw {
+                    status: 500,
+                    error: {
+                        code: "IMAGINARY_ERROR",
+                        title: "very real error!"
+                    }
+                }
+            }
+        });
+
+        get("/foo?hej=20", function (error, response, body) {
             done();
         });
     });
