@@ -380,12 +380,9 @@ describe("FrusterWebBus", () => {
             }
         });
 
-        ws.on("close", (code, reason) => {
-            done.fail(`websocket closed: ${code} ${reason}`);
-        });
-        ws2.on("close", (code, reason) => {
-            done.fail(`websocket2 closed: ${code} ${reason}`);
-        });
+        ws.on("close", (code, reason) => { done.fail(`websocket closed: ${code} ${reason}`); });
+
+        ws2.on("close", (code, reason) => { done.fail(`websocket2 closed: ${code} ${reason}`); });
 
         ws.on("message", (json) => {
             const message = JSON.parse(json.toString());
@@ -396,16 +393,20 @@ describe("FrusterWebBus", () => {
             expect(message.subject).toBe(message.subject);
 
             wsGotMessage = true;
+
+            assertMessageReceived();
         });
 
         ws2.on("message", (json) => {
             ws2GotMessage = true;
 
+            assertMessageReceived();
+        });
+
+        function assertMessageReceived() {
             if (wsGotMessage && ws2GotMessage)
                 done();
-            else
-                done.fail();
-        });
+        }
 
         setTimeout(() => {
             bus.request("ws.out.*.new-message", message);

@@ -17,13 +17,16 @@ describe("Interceptors", function () {
         bus: bus
     });
 
-    beforeAll(() => {
+    function setConfig() {
         conf.interceptors = interceptorConfig({
             INTERCEPTOR_1: "1;http.*,!http.post.auth;interceptor-1",
             INTERCEPTOR_2: "2;*;interceptor-2",
-            INTERCEPTOR_3: "3;*;interceptor-response;response;allow-exceptions",
-            INTERCEPTOR_4: "4;*;interceptor-response-2;response"
+            INTERCEPTOR_3: "3;*;interceptor-response;response;allow-exceptions"
         });
+    }
+
+    afterEach(() => {
+        conf.interceptors = interceptorConfig();
     });
 
     afterAll(() => {
@@ -31,6 +34,7 @@ describe("Interceptors", function () {
     });
 
     it("should invoke interceptor", function (done) {
+        setConfig();
 
         testUtils.mockService({
             subject: "interceptor-1",
@@ -83,6 +87,7 @@ describe("Interceptors", function () {
     });
 
     it("should invoke response interceptor", function (done) {
+        setConfig();
 
         testUtils.mockService({
             subject: "interceptor-1",
@@ -126,6 +131,7 @@ describe("Interceptors", function () {
     });
 
     it("should invoke response interceptor with exception if configured to allow exceptions", function (done) {
+        setConfig();
 
         testUtils.mockService({
             subject: "interceptor-1",
@@ -176,60 +182,43 @@ describe("Interceptors", function () {
     });
 
     it("should not invoke response interceptor with exception if not configured to allow exceptions", function (done) {
-
-        testUtils.mockService({
-            subject: "interceptor-1",
-            response: (resp) => {
-                return resp;
-            }
-        });
-
-        testUtils.mockService({
-            subject: "interceptor-2",
-            response: (resp) => {
-                return resp;
-            }
+        conf.interceptors = interceptorConfig({
+            INTERCEPTOR_1: "4;*;interceptor-response;response"
         });
 
         testUtils.mockService({
             subject: "interceptor-response",
             response: (resp) => {
-                throw {
-                    status: 500,
-                    error: {
-                        code: "IMAGINARY_ERROR",
-                        title: "very real error!"
-                    }
-                };
-            }
-        });
-
-        testUtils.mockService({
-            subject: "interceptor-response-2",
-            response: (resp) => {
+                // allow-exceptions is not defined so we should never reach this place!
                 done.fail();
             }
         });
 
+        const error = {
+            status: 500,
+            error: {
+                code: "IMAGINARY_ERROR",
+                title: "very real error!"
+            }
+        };
+
         testUtils.mockService({
             subject: "http.get.foo",
-            expectRequest: (req) => {
-                throw {
-                    status: 500,
-                    error: {
-                        code: "IMAGINARY_ERROR",
-                        title: "very real error!"
-                    }
-                }
-            }
+            expectRequest: () => { throw error; }
         });
 
-        get("/foo?hej=20", function (error, response, body) {
+        get("/foo?hej=20", (err, resp, body) => {
+            expect(body.status).toBe(error.status);
+            expect(body.error.code).toBe(error.error.code);
+            expect(body.error.title).toBe(error.error.title);
+
             done();
         });
     });
 
     it("should return error from interceptor", function (done) {
+        setConfig();
+
         testUtils.mockService({
             subject: "interceptor-1",
             response: (resp) => {
@@ -256,6 +245,8 @@ describe("Interceptors", function () {
     });
 
     it("should respond directly from interceptor", function (done) {
+        setConfig();
+
         testUtils.mockService({
             subject: "interceptor-1",
             response: {

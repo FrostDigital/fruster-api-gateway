@@ -225,6 +225,10 @@ function invokeResponseInterceptors(subject, message, messageIsException) {
         return typeIsResponse && subjectMatchesSubject && isNotExceptionOrConfiguredToAllowExceptions;
     });
 
+    /** If no interceptors allowing exceptions were found we throw the error for it to be taken care of normally */
+    if (matchedInterceptors.length === 0 && messageIsException)
+        throw cleanInterceptedResponse(message, message);
+
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
         if (_message.interceptAction === interceptAction.respond) {
             return _message;
