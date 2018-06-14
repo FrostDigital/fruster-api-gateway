@@ -17,20 +17,25 @@ This means that one can define multiple interceptors with contextual namings suc
 
 Configuration is set with the following syntax:
 
-    <order>;<match pattern>;<interceptor target subject>;<type>
+    <order>;<match pattern>;<interceptor target subject>;<type>;<options>
 
 * `order` is order of when interceptor will be invoked in case more than one interceptor is defined
 * `match pattern` is the pattern the needs to match the requests/response subject in order for the interceptor to be invoked, can be any glob style pattern
 * `interceptor target subject` is the interceptors endpoint that the request/response will be routed of if pattern matches
 * `type` is one of `request|response` which defines if interceptor is invoked during request handling or during response handling (optional, defaults to `request`)
+* `options` is a list of flags for different types of behaviours. Available options are:
+	* `allow-exceptions` - With this enabled all messages, including exceptions, are sent to response interceptors. Request body will include both the error and the original request body from the initial request.
 
 Examples:
 
-	# Math all POSTs and PUTs and send to endpoint log-service.time when incoming request arrives 
+	# Match all POSTs and PUTs and send to endpoint log-service.time when incoming request arrives 
     INTERCEPTOR_PERF=1;http.post.*,http.put.*;log-service.time;request
 	
-	# Math all requests except auth and send to foo-service 
+	# Match all requests except auth and send to foo-service 
     INTERCEPTOR_FOO=2;*,!http.post.auth;foo-service;request
+
+	# Matches http.post.auth.token even if it throws an exception
+    INTERCEPTOR_FOO=3;*,http.post.auth.token;foo-service;response;allow-exceptions
 
 ## Ordering
 
