@@ -216,10 +216,18 @@ function invokeRequestInterceptors(subject, message) {
     }, message);
 }
 
-function invokeResponseInterceptors(subject, message) {
+function invokeResponseInterceptors(subject, message, messageIsException) {
     const matchedInterceptors = conf.interceptors.filter(interceptor => {
-        return interceptor.type === "response" && interceptor.match(subject);
+        const typeIsResponse = interceptor.type === "response";
+        const subjectMatchesSubject = interceptor.match(subject);
+        const isNotExceptionOrConfiguredToAllowExceptions = !messageIsException ? true : !!interceptor.options.allowExceptions;
+
+        return typeIsResponse && subjectMatchesSubject && isNotExceptionOrConfiguredToAllowExceptions;
     });
+
+    /** If no interceptors allowing exceptions were found we throw the error for it to be taken care of normally */
+    if (matchedInterceptors.length === 0 && messageIsException)
+        throw cleanInterceptedResponse(message, message);
 
     return Promise.reduce(matchedInterceptors, (_message, interceptor) => {
         if (_message.interceptAction === interceptAction.respond) {
@@ -271,21 +279,32 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
 
             if (isMultipart(httpReq)) {
                 return sendInternalMultipartRequest(subject, interceptedReq, httpReq)
-                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
-                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
+                    .then(interceptResponse)
+                    .catch(err => interceptResponse(err, true));
             } else {
                 return sendInternalBusRequest(subject, interceptedReq)
-                    .then(response => invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message))
-                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse)));
+                    .then(interceptResponse)
+                    .catch(err => interceptResponse(err, true));
+
+                function interceptResponse(response, messageIsException) {
+                    if (response.error)
+                        response.data = interceptedReq.data;
+
+                    return invokeResponseInterceptors(subject, prepareInterceptResponseMessage(response, message), messageIsException)
+                        .then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
+                        .catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
+                }
             }
         });
 }
 
 function prepareInterceptResponseMessage(response, message) {
     const interceptMessage = Object.assign({}, response);
+
     interceptMessage.query = message.query;
     interceptMessage.params = message.params;
     interceptMessage.path = message.path;
+
     return interceptMessage;
 }
 
@@ -293,6 +312,14 @@ function cleanInterceptedResponse(response, interceptedResponse) {
     delete interceptedResponse.query;
     delete interceptedResponse.params;
     delete interceptedResponse.path;
+
+    /** If we get errors back we have the request data in the response as well */
+    if (response.error && interceptedResponse.error) {
+        delete interceptedResponse.data;
+        delete interceptedResponse.query;
+        delete interceptedResponse.path;
+    }
+
     return interceptedResponse;
 }
 
