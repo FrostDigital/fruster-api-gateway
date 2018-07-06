@@ -1,27 +1,32 @@
 const request = require("request");
 const bus = require("fruster-bus");
+const testUtils = require("fruster-test-utils");
 const conf = require("../conf");
 const apiGw = require("../api-gateway");
-const testUtils = require("fruster-test-utils");
 const interceptorConfig = require("../lib/interceptor-config");
 
 describe("Interceptors", function () {
 
     const httpPort = Math.floor(Math.random() * 6000 + 2000);
     const baseUri = "http://127.0.0.1:" + httpPort;
+    const mongoUrl = `mongodb://localhost:27017/fruster-api-gateway-test`;
 
     testUtils.startBeforeEach({
-        service: (connection) => apiGw.start(httpPort, connection.natsUrl),
+        service: (connection) => apiGw.start(connection.natsUrl, mongoUrl, httpPort),
         mockNats: true,
         bus: bus
     });
 
-    beforeAll(() => {
+    function setConfig() {
         conf.interceptors = interceptorConfig({
             INTERCEPTOR_1: "1;http.*,!http.post.auth;interceptor-1",
             INTERCEPTOR_2: "2;*;interceptor-2",
-            INTERCEPTOR_3: "3;*;interceptor-response;response"
+            INTERCEPTOR_3: "3;*;interceptor-response;response;allow-exceptions"
         });
+    }
+
+    afterEach(() => {
+        conf.interceptors = interceptorConfig();
     });
 
     afterAll(() => {
@@ -29,10 +34,11 @@ describe("Interceptors", function () {
     });
 
     it("should invoke interceptor", function (done) {
+        setConfig();
 
         testUtils.mockService({
             subject: "interceptor-1",
-            expectRequest: (req) => {                
+            expectRequest: (req) => {
                 expect(req.transactionId).toBeDefined("transactionId should be set");
             },
             response: (resp) => {
@@ -45,7 +51,7 @@ describe("Interceptors", function () {
 
         testUtils.mockService({
             subject: "interceptor-2",
-            expectRequest: (req) => {                
+            expectRequest: (req) => {
                 expect(req.transactionId).toBeDefined("transactionId should be set");
             },
             response: (resp) => {
@@ -81,6 +87,7 @@ describe("Interceptors", function () {
     });
 
     it("should invoke response interceptor", function (done) {
+        setConfig();
 
         testUtils.mockService({
             subject: "interceptor-1",
@@ -123,7 +130,95 @@ describe("Interceptors", function () {
         });
     });
 
+    it("should invoke response interceptor with exception if configured to allow exceptions", function (done) {
+        setConfig();
+
+        testUtils.mockService({
+            subject: "interceptor-1",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-2",
+            response: (resp) => {
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-response",
+            response: (resp) => {
+                expect(resp.query.hej).toBe("20", "should add query to intercept request");
+                resp.data.wasHere = "interceptor-response";
+                resp.status = 200;
+                delete resp.data.helloThere;
+                delete resp.error;
+                return resp;
+            }
+        });
+
+        testUtils.mockService({
+            subject: "http.get.foo",
+            expectRequest: (req) => {
+                throw {
+                    status: 500,
+                    error: {
+                        code: "IMAGINARY_ERROR",
+                        title: "very real error!"
+                    }
+                }
+            }
+        });
+
+        get("/foo?hej=20", function (error, response, body) {
+            expect(body.data.wasHere).toBe("interceptor-response");
+            expect(body.data.helloThere).toBeUndefined();
+            expect(response.statusCode).toBe(200);
+            expect(body.status).toBe(200);
+            done();
+        });
+    });
+
+    it("should not invoke response interceptor with exception if not configured to allow exceptions", function (done) {
+        conf.interceptors = interceptorConfig({
+            INTERCEPTOR_1: "4;*;interceptor-response;response"
+        });
+
+        testUtils.mockService({
+            subject: "interceptor-response",
+            response: (resp) => {
+                // allow-exceptions is not defined so we should never reach this place!
+                done.fail();
+            }
+        });
+
+        const error = {
+            status: 500,
+            error: {
+                code: "IMAGINARY_ERROR",
+                title: "very real error!"
+            }
+        };
+
+        testUtils.mockService({
+            subject: "http.get.foo",
+            expectRequest: () => { throw error; }
+        });
+
+        get("/foo?hej=20", (err, resp, body) => {
+            expect(body.status).toBe(error.status);
+            expect(body.error.code).toBe(error.error.code);
+            expect(body.error.title).toBe(error.error.title);
+
+            done();
+        });
+    });
+
     it("should return error from interceptor", function (done) {
+        setConfig();
+
         testUtils.mockService({
             subject: "interceptor-1",
             response: (resp) => {
@@ -150,6 +245,8 @@ describe("Interceptors", function () {
     });
 
     it("should respond directly from interceptor", function (done) {
+        setConfig();
+
         testUtils.mockService({
             subject: "interceptor-1",
             response: {
