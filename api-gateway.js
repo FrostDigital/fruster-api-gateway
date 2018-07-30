@@ -332,16 +332,21 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
                 uri: httpOptions.url
             };
 
+            console.log(1);
             httpReq.headers.data = JSON.stringify(message);
+            console.log(2, "setting data message as header", httpReq.headers.data);
 
             return new Promise((resolve, reject) => {
                 httpReq
                     .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
                         if (!error) {
+                            console.log(3, "seems good");
                             var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
                             body.headers = response.headers;
+                            console.log(4, "parsed body", body);
                             resolve(body);
                         } else {
+                            console.log("got error");
                             let errorObj = {
                                 status: 500,
                                 error: error
