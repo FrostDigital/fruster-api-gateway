@@ -18,7 +18,6 @@ const constants = require("./lib/constants");
 const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
 const statzIndex = require("./web/statz/index");
 const favicon = require("express-favicon");
-const emojiStrip = require("emoji-strip");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -333,19 +332,17 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
                 uri: httpOptions.url
             };
 
-            httpReq.headers.data = emojiStrip(JSON.stringify(message));
+            httpReq.headers.data = utils.convertJsonToHttpHeaderString(message);
 
             return new Promise((resolve, reject) => {
                 httpReq
                     .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
                         if (!error) {
-                            console.log(3, "seems good");
-                            var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+                            let body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
                             body.headers = response.headers;
-                            console.log(4, "parsed body", body);
                             resolve(body);
                         } else {
-                            console.log(4, "got error", error);
+                            log.error(`Got error response when streaming multipart request to ${requestOptions.uri}:`, error);
                             let errorObj = {
                                 status: 500,
                                 error: error
