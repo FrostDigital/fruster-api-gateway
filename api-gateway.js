@@ -18,6 +18,7 @@ const constants = require("./lib/constants");
 const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
 const statzIndex = require("./web/statz/index");
 const favicon = require("express-favicon");
+const emojiStrip = require("emoji-strip");
 
 const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
@@ -332,9 +333,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
                 uri: httpOptions.url
             };
 
-            console.log(1);
-            httpReq.headers.data = JSON.stringify(message);
-            console.log(2, "setting data message as header", httpReq.headers.data);
+            httpReq.headers.data = emojiStrip(JSON.stringify(message));
 
             return new Promise((resolve, reject) => {
                 httpReq
@@ -346,7 +345,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
                             console.log(4, "parsed body", body);
                             resolve(body);
                         } else {
-                            console.log("got error");
+                            console.log(4, "got error", error);
                             let errorObj = {
                                 status: 500,
                                 error: error
