@@ -332,16 +332,17 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
                 uri: httpOptions.url
             };
 
-            httpReq.headers.data = JSON.stringify(message);
+            httpReq.headers.data = utils.convertJsonToHttpHeaderString(message);
 
             return new Promise((resolve, reject) => {
                 httpReq
                     .pipe(request[httpReq.method.toLowerCase()](requestOptions, (error, response, returnBody) => {
                         if (!error) {
-                            var body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
+                            let body = typeof returnBody === "string" ? JSON.parse(returnBody) : returnBody;
                             body.headers = response.headers;
                             resolve(body);
                         } else {
+                            log.error(`Got error response when streaming multipart request to ${requestOptions.uri}:`, error);
                             let errorObj = {
                                 status: 500,
                                 error: error
