@@ -19,6 +19,7 @@
         "fruster-bus": "0.2.26",
         "fruster-health": "~0.0.12",
         "fruster-log": "0.0.18",
+        "influx": "^5.0.7",
         "install": "^0.11.0",
         "jade": "~1.11.0",
         "lodash": "^4.17.10",
