@@ -23,7 +23,6 @@ const httpMetricMiddleware = require("./lib/middleware/http-metric-middleware");
 const noCacheMiddleware = require("./lib/middleware/no-cache-middleware");
 const decodeTokenMiddleware = require("./lib/middleware/decode-token-middleware");
 
-const app = express();
 const dateStarted = new Date();
 
 /**
@@ -41,72 +40,82 @@ const interceptAction = {
 	next: "next"
 };
 
-// Express middlewares and handler
-app.use(favicon(__dirname + "/favicon.png"));
-app.use(reqIdMiddleware());
-app.use(
-	httpMetricMiddleware({
-		influxClient,
-		responseTimeRepo
-	})
-);
-app.use(
-	cors({
-		origin: conf.allowOrigin,
-		credentials: true,
-		allowedHeaders: conf.allowedHeaders
-	})
-);
-app.use(timeout(conf.httpTimeout));
-app.use(
-	bodyParser.json({
-		type: req => {
-			const contentType = req.headers["content-type"] || "";
-			return contentType.includes("json");
-		},
-		limit: conf.maxRequestSize
-	})
-);
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(bearerToken());
-app.use(noCacheMiddleware());
+/**
+ * Creates an Express app and adds middlewares and handlers
+ * so it can receive incoming requests and pass them thru to
+ * internal services.
+ */
+function createExpressApp() {
+	const app = express();
 
-app.get(["/", "/health"], function(req, res) {
-	res.json({
-		status: "Alive since " + dateStarted
+	app.use(favicon(__dirname + "/favicon.png"));
+	app.use(reqIdMiddleware());
+	app.use(
+		httpMetricMiddleware({
+			influxClient,
+			responseTimeRepo
+		})
+	);
+	app.use(
+		cors({
+			origin: conf.allowOrigin,
+			credentials: true,
+			allowedHeaders: conf.allowedHeaders
+		})
+	);
+	app.use(timeout(conf.httpTimeout));
+	app.use(
+		bodyParser.json({
+			type: req => {
+				const contentType = req.headers["content-type"] || "";
+				return contentType.includes("json");
+			},
+			limit: conf.maxRequestSize
+		})
+	);
+	app.use(bodyParser.urlencoded({ extended: false }));
+	app.use(cookieParser());
+	app.use(bearerToken());
+	app.use(noCacheMiddleware());
+
+	app.get(["/", "/health"], function(req, res) {
+		res.json({
+			status: "Alive since " + dateStarted
+		});
 	});
-});
 
-if (conf.enableStats) {
-	// Add endpoints serving UI for response time statistics
-	app.set("views", "./web/statz");
-	app.set("view engine", "pug");
+	if (conf.enableStats) {
+		// Add endpoints serving UI for response time statistics
+		app.set("views", "./web/statz");
+		app.set("view engine", "pug");
 
-	app.get("/statz", statzIndex.index);
-	app.get("/statz/search", statzIndex.search);
+		app.get("/statz", statzIndex.index);
+		app.get("/statz/search", statzIndex.search);
+	}
+
+	app.use(decodeTokenMiddleware());
+	app.use(handleReq);
+
+	app.use((err, req, res, next) => {
+		res.status(err.status || 500);
+
+		let json = {
+			message: err.message
+		};
+
+		if (conf.printStacktrace) {
+			json.stacktrace = err.stack;
+		}
+
+		res.json(json);
+
+		if (res.status === 500) {
+			log.error(err.stack);
+		}
+	});
+
+	return app;
 }
-
-app.use(decodeTokenMiddleware());
-app.use(handleReq);
-
-app.use((err, req, res, next) => {
-	res.status(err.status || 500);
-
-	let json = {
-		message: err.message
-	};
-
-	if (conf.printStacktrace) {
-		json.stacktrace = err.stack;
-	}
-
-	res.json(json);
-
-	if (res.status === 500) {
-		log.error(err.stack);
-	}
-});
 
 /**
  * Main handler for incoming http requests.
@@ -337,17 +346,19 @@ function isMultipart(httpReq) {
 module.exports = {
 	start: async (busAddress, mongoUrl, httpServerPort) => {
 		if (conf.enableStats) {
+			log.info("Enabling stats module, view by visiting /statz");
 			const db = await mongo.connect(mongoUrl);
 			responseTimeRepo = new ResponseTimeRepo(db);
 			createIndexes(db);
 		}
 
 		if (conf.influxDbUrl) {
+			log.info("Enabling influxdb");
 			influxClient = await createInfluxClient();
 		}
 
 		const startHttpServer = new Promise((resolve, reject) => {
-			const server = http.createServer(app).listen(httpServerPort);
+			const server = http.createServer(createExpressApp()).listen(httpServerPort);
 
 			server.on("error", reject);
 
