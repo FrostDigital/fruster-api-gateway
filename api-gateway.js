@@ -353,7 +353,7 @@ module.exports = {
 		}
 
 		if (conf.influxDbUrl) {
-			log.info("Enabling influxdb");
+			log.info("Enabling InfluxDB");
 			influxRepo = await createInfluxRepo();
 		}
 
@@ -393,9 +393,19 @@ function createIndexes(db) {
  * Creates and initializes the influx client.
  */
 async function createInfluxRepo() {
-	// Create and initialize Influx client
-	return await new InfluxRepo({
-		url: conf.influxDbUrl,
-		writeInterval: conf.influxWriteInterval
-	}).init();
+	let influx = null;
+
+	try {
+		influx = await new InfluxRepo({
+			url: conf.influxDbUrl,
+			writeInterval: conf.influxWriteInterval
+		}).init();
+	} catch (err) {
+		log.warn(
+			"Failed to connect to InfluxDB, API Gateway will start anyways but metrics will not be written to InfluxDB"
+		);
+		log.error(err);
+	}
+
+	return influx;
 }
