@@ -16,7 +16,7 @@ const cors = require("cors");
 const bearerToken = require("express-bearer-token");
 const timeout = require("connect-timeout");
 const bodyParser = require("body-parser");
-const InfluxClient = require("./lib/clients/InfluxClient");
+const InfluxRepo = require("./lib/repos/InfluxRepo");
 const favicon = require("express-favicon");
 const reqIdMiddleware = require("./lib/middleware/reqid-middleware");
 const httpMetricMiddleware = require("./lib/middleware/http-metric-middleware");
@@ -31,9 +31,9 @@ const dateStarted = new Date();
 let responseTimeRepo;
 
 /**
- * @type InfluxClient
+ * @type InfluxRepo
  */
-let influxClient;
+let influxRepo;
 
 const interceptAction = {
 	respond: "respond",
@@ -52,7 +52,7 @@ function createExpressApp() {
 	app.use(reqIdMiddleware());
 	app.use(
 		httpMetricMiddleware({
-			influxClient,
+			influxRepo,
 			responseTimeRepo
 		})
 	);
@@ -354,7 +354,7 @@ module.exports = {
 
 		if (conf.influxDbUrl) {
 			log.info("Enabling influxdb");
-			influxClient = await createInfluxClient();
+			influxRepo = await createInfluxRepo();
 		}
 
 		const startHttpServer = new Promise((resolve, reject) => {
@@ -392,9 +392,9 @@ function createIndexes(db) {
 /**
  * Creates and initializes the influx client.
  */
-async function createInfluxClient() {
+async function createInfluxRepo() {
 	// Create and initialize Influx client
-	return await new InfluxClient({
+	return await new InfluxRepo({
 		url: conf.influxDbUrl,
 		writeInterval: conf.influxWriteInterval
 	}).init();
