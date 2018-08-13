@@ -1,13 +1,7 @@
 const express = require("express");
 const mongo = require("mongodb");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
 const http = require("http");
-const timeout = require("connect-timeout");
 const ms = require("ms");
-const uuid = require("uuid");
-const bodyParser = require("body-parser");
-const bearerToken = require("express-bearer-token");
 const request = require("request");
 const Promise = require("bluebird");
 const log = require("fruster-log");
@@ -17,10 +11,18 @@ const conf = require("./conf");
 const constants = require("./lib/constants");
 const ResponseTimeRepo = require("./lib/repos/ResponseTimeRepo");
 const statzIndex = require("./web/statz/index");
-const favicon = require("express-favicon");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const bearerToken = require("express-bearer-token");
+const timeout = require("connect-timeout");
+const bodyParser = require("body-parser");
 const InfluxClient = require("./lib/clients/InfluxClient");
+const favicon = require("express-favicon");
+const reqIdMiddleware = require("./lib/middleware/reqid-middleware");
+const httpMetricMiddleware = require("./lib/middleware/http-metric-middleware");
+const noCacheMiddleware = require("./lib/middleware/no-cache-middleware");
+const decodeTokenMiddleware = require("./lib/middleware/decode-token-middleware");
 
-const reqIdHeader = "X-Fruster-Req-Id";
 const app = express();
 const dateStarted = new Date();
 
@@ -29,11 +31,25 @@ const dateStarted = new Date();
  */
 let responseTimeRepo;
 
+/**
+ * @type InfluxClient
+ */
+let influxClient;
+
 const interceptAction = {
 	respond: "respond",
 	next: "next"
 };
+
+// Express middlewares and handler
 app.use(favicon(__dirname + "/favicon.png"));
+app.use(reqIdMiddleware());
+app.use(
+	httpMetricMiddleware({
+		influxClient,
+		responseTimeRepo
+	})
+);
 app.use(
 	cors({
 		origin: conf.allowOrigin,
@@ -45,35 +61,25 @@ app.use(timeout(conf.httpTimeout));
 app.use(
 	bodyParser.json({
 		type: req => {
-			let contentType = req.headers["content-type"] || "",
-				includesJson = contentType.includes("json");
-
-			return includesJson;
+			const contentType = req.headers["content-type"] || "";
+			return contentType.includes("json");
 		},
 		limit: conf.maxRequestSize
 	})
 );
-app.use(
-	bodyParser.urlencoded({
-		extended: false
-	})
-);
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(bearerToken());
+app.use(noCacheMiddleware());
 
-app.get("/", function(req, res) {
-	res.send("API Gateway is up and running");
-});
-
-app.get("/health", function(req, res) {
-	setNoCacheHeaders(res);
-
+app.get(["/", "/health"], function(req, res) {
 	res.json({
 		status: "Alive since " + dateStarted
 	});
 });
 
 if (conf.enableStats) {
+	// Add endpoints serving UI for response time statistics
 	app.set("views", "./web/statz");
 	app.set("view engine", "pug");
 
@@ -81,43 +87,8 @@ if (conf.enableStats) {
 	app.get("/statz/search", statzIndex.search);
 }
 
-app.use(async (httpReq, httpRes, next) => {
-	const reqId = uuid.v4();
-	const reqStartTime = Date.now();
-	var startTime = reqStartTime;
-	let endTime;
-
-	logRequest(reqId, httpReq);
-
-	try {
-		// Decode JWT token (provided as cookie or in header) if route is not public
-		let decodedToken = isPublicRoute(httpReq) ? {} : await decodeToken(httpReq, reqId);
-
-		startTime = Date.now();
-
-		// Translate http request to bus request and post it internally on bus
-		const internalRes = await sendInternalRequest(httpReq, reqId, decodedToken);
-
-		endTime = Date.now();
-
-		if (conf.enableStats) {
-			responseTimeRepo.save(reqId, httpReq, internalRes, endTime - startTime);
-		}
-
-		logResponse(reqId, internalRes, reqStartTime);
-
-		// Translate bus response to a HTTP response and send back to user
-		sendHttpResponse(reqId, internalRes, httpRes);
-	} catch (err) {
-		endTime = Date.now();
-
-		if (conf.enableStats) {
-			responseTimeRepo.save(reqId, httpReq, err, endTime - startTime);
-		}
-
-		handleError(err, httpRes, reqId, reqStartTime);
-	}
-});
+app.use(decodeTokenMiddleware());
+app.use(handleReq);
 
 app.use((err, req, res, next) => {
 	res.status(err.status || 500);
@@ -137,14 +108,34 @@ app.use((err, req, res, next) => {
 	}
 });
 
-function handleError(err, httpRes, reqId, reqStartTime) {
-	logError(reqId, err, reqStartTime);
+/**
+ * Main handler for incoming http requests.
+ *
+ * @param {Object} httpReq
+ * @param {Object} httpRes
+ * @param {Function} next
+ */
+async function handleReq(httpReq, httpRes, next) {
+	// Note: reqId was added by reqid-middleware
+	const reqId = httpReq.reqId;
 
+	try {
+		// Translate http request to bus request and post it internally on bus
+		const internalRes = await sendInternalRequest(httpReq);
+
+		// Translate bus response to a HTTP response and send it
+		sendHttpResponse(reqId, internalRes, httpRes);
+	} catch (err) {
+		handleBusErrorResponse(err, httpRes, reqId);
+	}
+}
+
+function handleBusErrorResponse(err, httpRes, reqId) {
 	/*
      * Translates 408 timeout to 404 since timeout indicates that no one
      * subscribed on subject
      */
-	if (err.status == 408) {
+	if (err.status === 408) {
 		err.status = 404;
 		httpRes.status(404);
 	} else {
@@ -153,57 +144,7 @@ function handleError(err, httpRes, reqId, reqStartTime) {
 
 	setRequestId(reqId, err);
 
-	httpRes
-		.set(err.headers)
-		.header(reqIdHeader, reqId)
-		.json(err);
-}
-
-/**
- * Token comes either in cookie or in header Authorization: Bearer <token>
- *
- * @return {Promise}
- */
-function decodeToken(httpReq, reqId) {
-	const encodedToken = getToken(httpReq);
-
-	if (encodedToken) {
-		const decodeReq = {
-			reqId: reqId,
-			data: encodedToken
-		};
-
-		return bus
-			.request({
-				skipOptionsRequest: true,
-				subject: "auth-service.decode-token",
-				message: decodeReq
-			})
-			.then(resp => resp.data)
-			.catch(async err => {
-				if (err.status == 401 || err.status == 403) {
-					log.debug("Failed to decode token (got error " + err.code + ") will expire cookie if present");
-					err.headers = err.headers || {};
-					err.headers["Set-Cookie"] = "jwt=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-				}
-
-				// If jwt token failed to be decoded, we should unregister any clients connected to that jwt token
-				bus.request({
-					skipOptionsRequest: true,
-					subject: "fruster-web-bus.unregister-client",
-					message: {
-						reqId: reqId,
-						data: {
-							jwt: encodedToken
-						}
-					}
-				});
-
-				throw err;
-			});
-	}
-	//@ts-ignore
-	return Promise.resolve({});
+	httpRes.set(err.headers).json(err);
 }
 
 function invokeRequestInterceptors(subject, message) {
@@ -257,23 +198,11 @@ function invokeResponseInterceptors(subject, message, messageIsException) {
 	);
 }
 
-function getToken(httpReq) {
-	let token;
-	if (httpReq.token) {
-		token = httpReq.token;
-	} else if (
-		httpReq.cookies[conf.authCookieName] &&
-		httpReq.cookies[conf.authCookieName].toLowerCase() !== "deleted"
-	) {
-		token = httpReq.cookies[conf.authCookieName];
-	}
-
-	return token;
-}
-
-function sendInternalRequest(httpReq, reqId, decodedToken) {
+function sendInternalRequest(httpReq) {
+	const reqId = httpReq.reqId;
+	const user = httpReq.user;
 	const subject = utils.createSubject(httpReq);
-	const message = utils.createRequest(httpReq, reqId, decodedToken);
+	const message = utils.createRequest(httpReq, reqId, user);
 
 	return invokeRequestInterceptors(subject, message).then(interceptedReq => {
 		if (interceptedReq.interceptAction === interceptAction.respond) {
@@ -281,8 +210,7 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
 			return interceptedReq;
 		}
 
-		log.debug("Sending to subject", subject);
-		log.silly(interceptedReq);
+		log.silly("Sending to subject", subject);
 
 		// Multipart requests are dealt with manually so that
 		// api gateway is able to stream the multipart body to
@@ -299,7 +227,8 @@ function sendInternalRequest(httpReq, reqId, decodedToken) {
 				.then(interceptResponse)
 				.catch(err => interceptResponse(err, true));
 		} else {
-			return sendInternalBusRequest(subject, interceptedReq)
+			return bus
+				.request(subject, interceptedReq, ms(conf.busTimeout))
 				.then(interceptResponse)
 				.catch(err => interceptResponse(err, true));
 
@@ -377,24 +306,21 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 	});
 }
 
-function sendInternalBusRequest(subject, message) {
-	return bus.request(subject, message, ms(conf.busTimeout));
-}
+/**
+ * Transfers status, headers and data from internal bus response to
+ * http response and sends it.
+ *
+ * @param {String} reqId
+ * @param {Object} busResponse
+ * @param {Object} httpResponse
+ */
+function sendHttpResponse(reqId, busResponse, httpResponse) {
+	setRequestId(reqId, busResponse);
 
-function sendHttpResponse(reqId, internalRes, httpRes) {
-	log.silly(internalRes.data);
-
-	setRequestId(reqId, internalRes);
-
-	if (conf.noCache) {
-		setNoCacheHeaders(httpRes);
-	}
-
-	httpRes
-		.status(internalRes.status)
-		.set(internalRes.headers)
-		.header(reqIdHeader, reqId)
-		.json(conf.unwrapMessageData ? internalRes.data : utils.sanitizeResponse(internalRes));
+	httpResponse
+		.status(busResponse.status)
+		.set(busResponse.headers)
+		.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
 }
 
 function setRequestId(reqId, resp) {
@@ -404,76 +330,20 @@ function setRequestId(reqId, resp) {
 	}
 }
 
-function setNoCacheHeaders(res) {
-	res.header("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate");
-	res.header("Pragma", "no-cache");
-	res.header("Expires", 0);
-}
-
-function logResponse(reqId, resp, startTime) {
-	const now = Date.now();
-	log.info(`[${reqId}] ${resp.status} (${now - startTime}ms)`);
-
-	if (isTrace()) {
-		log.silly(resp);
-	}
-}
-
-function logError(reqId, err, startTime) {
-	const now = Date.now();
-
-	let stringifiedError;
-
-	try {
-		stringifiedError = JSON.stringify(err.error);
-	} catch (e) {
-		stringifiedError = err.error;
-	}
-
-	if (err.status >= 500 || err.status == 408) {
-		log.error(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
-	} else {
-		log.info(`[${reqId}] ${err.status} ${stringifiedError} (${now - startTime}ms)`);
-	}
-}
-
-function logRequest(reqId, req) {
-	if (isTrace()) {
-		log.silly(req);
-	}
-	log.info(`[${reqId}] ${req.method} ${req.path}`);
-}
-
-function isTrace() {
-	return log.transports.console.level == "trace" || log.transports.console.level == "silly";
-}
-
 function isMultipart(httpReq) {
 	return httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart");
-}
-
-/**
- * Checks if request is a public route and hence not needed to
- * decode cookie or token.
- *
- * @param {Object} req
- */
-function isPublicRoute(req) {
-	return conf.publicRoutes.includes(req.path);
 }
 
 module.exports = {
 	start: async (busAddress, mongoUrl, httpServerPort) => {
 		if (conf.enableStats) {
 			const db = await mongo.connect(mongoUrl);
-
 			responseTimeRepo = new ResponseTimeRepo(db);
-
 			createIndexes(db);
 		}
 
 		if (conf.influxDbUrl) {
-			new InfluxClient({});
+			influxClient = await createInfluxClient();
 		}
 
 		const startHttpServer = new Promise((resolve, reject) => {
@@ -494,9 +364,7 @@ module.exports = {
 		};
 
 		return startHttpServer.then(server => connectToBus().then(() => server));
-	},
-
-	decodeToken: decodeToken
+	}
 };
 
 function createIndexes(db) {
@@ -508,4 +376,15 @@ function createIndexes(db) {
 			expireAfterSeconds: conf.statsTTL
 		}
 	);
+}
+
+/**
+ * Creates and initializes the influx client.
+ */
+async function createInfluxClient() {
+	// Create and initialize Influx client
+	return await new InfluxClient({
+		url: conf.influxDbUrl,
+		writeInterval: conf.influxWriteInterval
+	}).init();
 }

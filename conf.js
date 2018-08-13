@@ -11,7 +11,7 @@ module.exports = {
 
 	/**
 	 * Allow origin for CORS
-	 * Example: `*`, `http://www.example.com`,  `http://www.example.com,http://localhost:9000`
+	 * Examples: `*`, `http://www.example.com`, `http://www.example.com,http://localhost:9000`
 	 *
 	 * Default: *
 	 */
@@ -70,6 +70,13 @@ module.exports = {
 	 * Default: null
 	 */
 	influxDbUrl: process.env.INFLUXDB_URL || null,
+
+	/**
+	 * How often metrics are sent to influx.
+	 *
+	 * Default: 30s
+	 */
+	influxWriteInterval: ms(process.env.INFLUX_WRITE_INTERVAL || "30s"),
 
 	/**
 	 * For how long time HTTP response time stats should be saved.

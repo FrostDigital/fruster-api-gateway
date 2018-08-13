@@ -1,7 +1,7 @@
 const InfluxClient = require("../lib/clients/InfluxClient");
 
-fdescribe("InfluxClient", () => {
-	describe("with real influx", () => {
+describe("InfluxClient", () => {
+	xdescribe("with real influx", () => {
 		// Note: This test suite requries that influx db runs locally
 		// Start locally by running docker run -d --name influxdb -p 8086:8086 influxdb
 
@@ -31,13 +31,17 @@ fdescribe("InfluxClient", () => {
 			client.addHttpMetric({
 				duration: 100,
 				path: "/path",
-				statusCode: 200
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
 			});
 
 			client.addHttpMetric({
 				duration: 200,
 				path: "/another-path",
-				statusCode: 400
+				statusCode: 400,
+				reqId: "reqId",
+				method: "GET"
 			});
 
 			expect(client.cachedPoints.length).toBe(2);
@@ -70,7 +74,9 @@ fdescribe("InfluxClient", () => {
 			client.addHttpMetric({
 				duration: 100,
 				path: "/path",
-				statusCode: 200
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
 			});
 
 			expect(client.influx.writtenPoints.length).toBe(0, "points should not have been written yet");
@@ -94,7 +100,9 @@ fdescribe("InfluxClient", () => {
 			client.addHttpMetric({
 				duration: 100,
 				path: "/path",
-				statusCode: 200
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
 			});
 
 			// ...and wait until interval kicks in
@@ -104,7 +112,9 @@ fdescribe("InfluxClient", () => {
 			client.addHttpMetric({
 				duration: 100,
 				path: "/path",
-				statusCode: 200
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
 			});
 
 			// ...and wait until interval kicks in
@@ -112,6 +122,34 @@ fdescribe("InfluxClient", () => {
 
 			// After 2 consequtive failures, the interval should be stopped
 			expect(client.interval).toBeNull();
+
+			done();
+		});
+
+		it("should write points if maxCachedPoints was reached", async done => {
+			client.maxCachedPoints = 2;
+
+			// Add first metric
+			client.addHttpMetric({
+				duration: 100,
+				path: "/path",
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
+			});
+
+			client.addHttpMetric({
+				duration: 100,
+				path: "/path",
+				statusCode: 200,
+				reqId: "reqId",
+				method: "GET"
+			});
+
+			// Wait a bit for write to happen
+			await wait(10);
+
+			expect(client.cachedPoints.length).toBe(0, "should have written cached points");
 
 			done();
 		});
