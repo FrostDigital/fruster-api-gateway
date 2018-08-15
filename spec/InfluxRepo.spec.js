@@ -33,7 +33,8 @@ describe("InfluxRepo", () => {
 				path: "/path",
 				statusCode: 200,
 				reqId: "reqId",
-				method: "GET"
+				method: "GET",
+				userAgent: "Chrome"
 			});
 
 			repo.addHttpMetric({
@@ -41,7 +42,8 @@ describe("InfluxRepo", () => {
 				path: "/another-path",
 				statusCode: 400,
 				reqId: "reqId",
-				method: "GET"
+				method: "GET",
+				userAgent: "iOS"
 			});
 
 			expect(repo.cachedPoints.length).toBe(2);
@@ -66,8 +68,7 @@ describe("InfluxRepo", () => {
 				maxFailedAttempts: 2
 			});
 
-			// @ts-ignore
-			repo.influx = new MockInflux();
+			repo.influx = mockInflux(repo.influx);
 		});
 
 		it("should write points on a given interval", async done => {
@@ -89,70 +90,6 @@ describe("InfluxRepo", () => {
 
 			done();
 		});
-
-		it("should abort writes if failed more than maxFailedAttempts", async done => {
-			// Mock failed write
-			repo.influx.addOnWritePointsCallback(() => {
-				throw "A mock failure";
-			});
-
-			// Add first metric
-			repo.addHttpMetric({
-				duration: 100,
-				path: "/path",
-				statusCode: 200,
-				reqId: "reqId",
-				method: "GET"
-			});
-
-			// ...and wait until interval kicks in
-			await wait(writeInterval);
-
-			// Add second metric
-			repo.addHttpMetric({
-				duration: 100,
-				path: "/path",
-				statusCode: 200,
-				reqId: "reqId",
-				method: "GET"
-			});
-
-			// ...and wait until interval kicks in
-			await wait(writeInterval);
-
-			// After 2 consequtive failures, the interval should be stopped
-			expect(repo.interval).toBeNull();
-
-			done();
-		});
-
-		it("should write points if maxCachedPoints was reached", async done => {
-			repo.maxCachedPoints = 2;
-
-			// Add first metric
-			repo.addHttpMetric({
-				duration: 100,
-				path: "/path",
-				statusCode: 200,
-				reqId: "reqId",
-				method: "GET"
-			});
-
-			repo.addHttpMetric({
-				duration: 100,
-				path: "/path",
-				statusCode: 200,
-				reqId: "reqId",
-				method: "GET"
-			});
-
-			// Wait a bit for write to happen
-			await wait(10);
-
-			expect(repo.cachedPoints.length).toBe(0, "should have written cached points");
-
-			done();
-		});
 	});
 });
 
@@ -162,28 +99,26 @@ function wait(ms) {
 	});
 }
 
-class MockInflux {
-	constructor() {
-		this.writtenPoints = [];
-	}
+/**
+ * Override methods on influx client to avoid that is actually makes a
+ * call to real database.
+ *
+ * @param {Object} influx
+ */
+function mockInflux(influx) {
+	influx.writtenPoints = [];
 
-	writePoints(points) {
-		if (this.onWritePoints) {
-			this.onWritePoints(points);
-		} else {
-			this.writtenPoints = this.writtenPoints.concat(points);
+	influx.writePoints = points => {
+		if (influx.onWritePointsCallback) {
+			influx.onWritePointsCallback();
 		}
-	}
 
-	addOnWritePointsCallback(cb) {
-		this.onWritePoints = cb;
-	}
+		influx.writtenPoints = influx.writtenPoints.concat(points);
+	};
 
-	async getDatabaseNames() {
-		return [];
-	}
+	influx.onWritePoints = fn => {
+		influx.onWritePointsCallback = fn;
+	};
 
-	async createDatabase(name) {
-		return;
-	}
+	return influx;
 }
