@@ -7,6 +7,7 @@
 		"test": "node ./spec/support/jasmine-runner.js"
 	},
 	"dependencies": {
+		"batching-influx": "0.0.1",
 		"bluebird": "^3.5.1",
 		"body-parser": "^1.18.3",
 		"connect-timeout": "^1.7.0",
