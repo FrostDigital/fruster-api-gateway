@@ -445,34 +445,69 @@ describe("API Gateway", () => {
 		});
 	});
 
-	describe("XML support", () => {
+	describe("XML body support", () => {
 
-		// it("should POST XML body", () => {
+		it("should POST XML body when content-type is text/xml", async (done) => {
+			const xmlSnippet = "<Foo bar=\"1\" />";
 
-		// 	bus.subscribe("http.post.xml", req => {
-		// 		expect(req.data.hello).toBe(1337);
-		// 		return {
-		// 			status: 200
-		// 		};
-		// 	});
+			bus.subscribe("http.post.xml", req => {
+				expect(req.headers["content-type"]).toBe("text/xml");
+				expect(req.data).toBe(xmlSnippet);
 
-		// 	post(
-		// 		"/xml",
-		// 		{
-		// 			"content-type": "application/vnd.contentful.management.v1+json"
-		// 		},
-		// 		{
-		// 			hello: 1337
-		// 		},
-		// 		(error, response, body) => {
-		// 			expect(response.statusCode).toBe(200);
-		// 			expect(body.reqId).toBeDefined();
-		// 			done();
-		// 		}
-		// 	);
+				return {
+					status: 200
+				};
+			});
 
+			const response = await postXML("/xml", {}, xmlSnippet);
 
-		// });
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-fruster-req-id"]).toBeDefined();
+
+			done();
+		});
+
+		it("should POST XML body when content-type is application/xml", async (done) => {
+			const xmlSnippet = "<Foo bar=\"1\" />";
+
+			bus.subscribe("http.post.xml", req => {
+				expect(req.headers["content-type"]).toBe("application/xml");
+				expect(req.data).toBe(xmlSnippet);
+
+				return {
+					status: 200
+				};
+			});
+
+			const response = await postXML("/xml", { "Content-Type": "application/xml" }, xmlSnippet);
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-fruster-req-id"]).toBeDefined();
+
+			done();
+		});
+
+		it("should respond with XML", async (done) => {
+			const xmlSnippet = "<Foo bar=\"1\" />";
+
+			bus.subscribe("http.get.xml", req => {
+				return {
+					status: 200,
+					headers: {
+						"Content-Type": "text/xml"
+					},
+					data: xmlSnippet
+				};
+			});
+
+			const response = await get("/xml");
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-fruster-req-id"]).toBeDefined();
+			expect(response.body).toBe(xmlSnippet);
+
+			done();
+		});
 	});
 
 	function get(path, headers) {
@@ -483,22 +518,27 @@ describe("API Gateway", () => {
 		return doRequest({ method: "POST", path, headers, json });
 	}
 
-	// function postXML(path, headers, xmlString, cb) {
-	// 	if (typeof headers === "function") {
-	// 		cb = headers;
-	// 	}
-	// 	doRequest({method: "POST", path, headers, xmlString });
-	// }
+	function postXML(path, headers, xmlString) {
+		headers = { "Content-Type": "text/xml", ...headers };
+		return doRequest({ method: "POST", path, headers, rawBody: xmlString });
+	}
 
-	function doRequest({ method, path, headers = {}, json = null }) {
+	function doRequest({ method, path, headers = {}, json = null, rawBody = null }) {
 		return new Promise((resolve, reject) => {
-			request(
-				{
-					uri: baseUri + path,
-					method: method,
-					headers: headers,
-					json: json || true
-				},
+
+			const reqOpts = {
+				uri: baseUri + path,
+				method: method,
+				headers: headers
+			};
+
+			if (rawBody) {
+				reqOpts.body = rawBody;
+			} else {
+				reqOpts.json = json || true;
+			}
+
+			request(reqOpts,
 				(err, response, body) => {
 					if (err) {
 						return reject(err);

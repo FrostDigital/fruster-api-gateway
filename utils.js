@@ -1,5 +1,3 @@
-const uuid = require("uuid");
-
 const ESCAPE_DOTS_REGEPX = /\./g;
 
 module.exports = {
@@ -17,7 +15,7 @@ module.exports = {
 
 		return ["http", method]
 			.concat(path)
-			.filter(function(val) {
+			.filter(function (val) {
 				return val;
 			})
 			.join(".")

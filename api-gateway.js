@@ -73,12 +73,13 @@ function createExpressApp() {
 			limit: conf.maxRequestSize
 		})
 	);
+	app.use(bodyParser.text({ type: ["text/*", "application/xml"], defaultCharset: "utf-8" }));
 	app.use(bodyParser.urlencoded({ extended: false }));
 	app.use(cookieParser());
 	app.use(bearerToken());
 	app.use(noCacheMiddleware());
 
-	app.get(["/", "/health"], function(req, res) {
+	app.get(["/", "/health"], function (req, res) {
 		res.json({
 			status: "Alive since " + dateStarted
 		});
@@ -328,8 +329,13 @@ function sendHttpResponse(reqId, busResponse, httpResponse) {
 
 	httpResponse
 		.status(busResponse.status)
-		.set(busResponse.headers)
-		.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
+		.set(busResponse.headers);
+
+	if (isTextResponse(busResponse)) {
+		httpResponse.send(busResponse.data);
+	} else {
+		httpResponse.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
+	}
 }
 
 function setRequestId(reqId, resp) {
@@ -341,6 +347,16 @@ function setRequestId(reqId, resp) {
 
 function isMultipart(httpReq) {
 	return httpReq.headers["content-type"] && httpReq.headers["content-type"].includes("multipart");
+}
+
+/**
+ * Checks if bus response contains text based content based on its content type.
+ *
+ * @param {Object} busResponse
+ */
+function isTextResponse(busResponse) {
+	const contentType = busResponse.headers && (busResponse.headers["content-type"] || busResponse.headers["Content-Type"]) || "";
+	return contentType.indexOf("text/") === 0 || contentType === "application/xml";
 }
 
 module.exports = {
