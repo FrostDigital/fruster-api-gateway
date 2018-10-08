@@ -32,15 +32,16 @@ describe("API Gateway", () => {
 		}
 	});
 
-	it("should returns status code 404 if gateway does not recieve a response", done => {
-		get("/foo", (error, response, body) => {
-			expect(response.statusCode).toBe(404);
-			expect(body.status).toBe(404);
-			done();
-		});
+	it("should returns status code 404 if gateway does not recieve a response", async done => {
+		const response = await get("/foo");
+
+		expect(response.statusCode).toBe(404);
+		expect(response.body.status).toBe(404);
+
+		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET", done => {
+	it("should create and recieve bus message for HTTP GET", async done => {
 		bus.subscribe("http.get.foo", req => {
 			expect(req.path).toBe("/foo");
 			expect(req.method).toBe("GET");
@@ -58,20 +59,20 @@ describe("API Gateway", () => {
 			};
 		});
 
-		get("/foo?foo=bar", (error, response, body) => {
-			expect(response.statusCode).toBe(201);
-			expect(response.headers["a-header"]).toBe("foo");
-			expect(response.headers["etag"]).toBeDefined();
-			expect(response.headers["cache-control"]).toBeUndefined();
-			expect(response.headers["x-fruster-req-id"]).toBeDefined();
-			expect(body.data.foo).toBe("bar");
-			expect(body.headers).toBeUndefined();
+		const response = await get("/foo?foo=bar");
 
-			done();
-		});
+		expect(response.statusCode).toBe(201);
+		expect(response.headers["a-header"]).toBe("foo");
+		expect(response.headers["etag"]).toBeDefined();
+		expect(response.headers["cache-control"]).toBeUndefined();
+		expect(response.headers["x-fruster-req-id"]).toBeDefined();
+		expect(response.body.data.foo).toBe("bar");
+		expect(response.body.headers).toBeUndefined();
+
+		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET that includes dot in path", done => {
+	it("should create and recieve bus message for HTTP GET that includes dot in path", async done => {
 		bus.subscribe("http.get.foo.:paramWithDot.foo", req => {
 			expect(req.path).toBe("/foo/foo.bar/foo");
 			expect(req.method).toBe("GET");
@@ -89,15 +90,15 @@ describe("API Gateway", () => {
 			};
 		});
 
-		get("/foo/foo.bar/foo", (error, response, body) => {
-			expect(response.statusCode).toBe(200);
-			expect(body.data.foo).toBe("bar");
+		const response = await get("/foo/foo.bar/foo");
 
-			done();
-		});
+		expect(response.statusCode).toBe(200);
+		expect(response.body.data.foo).toBe("bar");
+
+		done();
 	});
 
-	it("should get no cache headers on HTTP response when NO_CACHE is true", done => {
+	it("should get no cache headers on HTTP response when NO_CACHE is true", async done => {
 		conf.noCache = true;
 
 		bus.subscribe("http.get.foo", req => {
@@ -109,18 +110,19 @@ describe("API Gateway", () => {
 			};
 		});
 
-		get("/foo?foo=bar", (error, response, body) => {
-			expect(response.headers["etag"]).toBeDefined();
-			expect(response.headers["cache-control"]).toBe("max-age=0, no-cache, no-store, must-revalidate");
-			expect(response.headers["pragma"]).toBe("no-cache");
-			expect(response.headers["expires"]).toBe("0");
+		const response = await get("/foo?foo=bar");
 
-			conf.noCache = false;
-			done();
-		});
+		expect(response.headers["etag"]).toBeDefined();
+		expect(response.headers["cache-control"]).toBe("max-age=0, no-cache, no-store, must-revalidate");
+		expect(response.headers["pragma"]).toBe("no-cache");
+		expect(response.headers["expires"]).toBe("0");
+
+		conf.noCache = false;
+
+		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET in unwrapped mode", done => {
+	it("should create and recieve bus message for HTTP GET in unwrapped mode", async done => {
 		conf.unwrapMessageData = true;
 
 		bus.subscribe("http.get.foo", req => {
@@ -132,15 +134,16 @@ describe("API Gateway", () => {
 			};
 		});
 
-		get("/foo", (error, response, body) => {
-			expect(body.foo).toBe("bar");
-			expect(response.statusCode).toBe(200);
-			conf.unwrapMessageData = false;
-			done();
-		});
+		const response = await get("/foo");
+		expect(response.body.foo).toBe("bar");
+		expect(response.statusCode).toBe(200);
+
+		conf.unwrapMessageData = false;
+
+		done();
 	});
 
-	it("should return error status code from bus", done => {
+	it("should return error status code from bus", async done => {
 		bus.subscribe("http.post.bar", req => {
 			return {
 				status: 420,
@@ -150,15 +153,16 @@ describe("API Gateway", () => {
 			};
 		});
 
-		post("/bar", (error, response, body) => {
-			expect(response.statusCode).toBe(420);
-			expect(response.headers["x-foo"]).toBe("bar");
-			done();
-		});
+		const response = await post("/bar");
+
+		expect(response.statusCode).toBe(420);
+		expect(response.headers["x-foo"]).toBe("bar");
+
+		done();
 	});
 
 	describe("Tokens", () => {
-		it("should return 403 if validation of JWT cookie failed", done => {
+		it("should return 403 if validation of JWT cookie failed", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				return {
 					status: 403,
@@ -168,20 +172,15 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get(
-				"/foo",
-				{
-					cookie: "jwt=acookie"
-				},
-				(error, response, body) => {
-					expect(response.statusCode).toBe(403);
-					expect(body.error.code).toBe("auth-service.403.1");
-					done();
-				}
-			);
+			const response = await get("/foo", { cookie: "jwt=acookie" });
+
+			expect(response.statusCode).toBe(403);
+			expect(response.body.error.code).toBe("auth-service.403.1");
+
+			done();
 		});
 
-		it("should return 403 if validation of JWT in auth header failed", done => {
+		it("should return 403 if validation of JWT in auth header failed", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("a-token");
 				return {
@@ -192,20 +191,15 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get(
-				"/foo",
-				{
-					authorization: "Bearer a-token"
-				},
-				(error, response, body) => {
-					expect(response.statusCode).toBe(403);
-					expect(body.error.code).toBe("auth-service.403.1");
-					done();
-				}
-			);
+			const response = await get("/foo", { authorization: "Bearer a-token" });
+
+			expect(response.statusCode).toBe(403);
+			expect(response.body.error.code).toBe("auth-service.403.1");
+
+			done();
 		});
 
-		it("should set user data with decoded jwt cookie", done => {
+		it("should set user data with decoded jwt cookie", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("acookie");
 				return {
@@ -224,24 +218,17 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get(
-				"/foo",
-				{
-					cookie: "jwt=acookie"
-				},
-				(error, response, body) => {
-					expect(response.statusCode).toBe(200);
-					expect(body.user).toBeUndefined();
-					done();
-				}
-			);
+			const response = await get("/foo", { cookie: "jwt=acookie" });
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body.user).toBeUndefined();
+
+			done();
 		});
 
-		it("should not decode token if route is public", done => {
-			let authServiceWasInvoked = false;
+		it("should not decode token if route is public", async done => {
 
 			bus.subscribe("auth-service.decode-token", req => {
-				authServiceWasInvoked = true;
 				done.fail("Auth service should not have been invoked");
 				return {
 					status: 200,
@@ -259,20 +246,15 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get(
-				"/auth/cookie",
-				{
-					cookie: "jwt=acookie"
-				},
-				(error, response, body) => {
-					expect(response.statusCode).toBe(200);
-					expect(body.user).toBeUndefined();
-					done();
-				}
-			);
+			const response = await get("/auth/cookie", { cookie: "jwt=acookie" });
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body.user).toBeUndefined();
+
+			done();
 		});
 
-		it("should not try to decode token if none is present", done => {
+		it("should not try to decode token if none is present", async done => {
 			bus.subscribe("http.get.foo", req => {
 				return {
 					status: 200,
@@ -282,14 +264,15 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get("/foo", (error, response, body) => {
-				expect(response.statusCode).toBe(200);
-				expect(body.user).toBeUndefined();
-				done();
-			});
+			const response = await get("/foo");
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body.user).toBeUndefined();
+
+			done();
 		});
 
-		it("should set user data with decoded jwt cookie", done => {
+		it("should set user data with decoded jwt cookie", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("acookie");
 				return {
@@ -308,35 +291,31 @@ describe("API Gateway", () => {
 				};
 			});
 
-			get(
-				"/foo",
-				{
-					cookie: "jwt=acookie"
-				},
-				(error, response, body) => {
-					expect(response.statusCode).toBe(200);
-					expect(body.user).toBeUndefined();
-					done();
-				}
-			);
+			const response = await get("/foo", { cookie: "jwt=acookie" });
+
+			expect(response.statusCode).toBe(200);
+			expect(response.body.user).toBeUndefined();
+
+			done();
 		});
 	});
 
-	it("should set reqId in HTTP response even though none is returned from bus", done => {
+	it("should set reqId in HTTP response even though none is returned from bus", async done => {
 		bus.subscribe("http.get.foo", req => {
 			return {
 				status: 200
 			};
 		});
 
-		get("/foo", (error, response, body) => {
-			expect(response.statusCode).toBe(200);
-			expect(body.reqId).toBeDefined();
-			done();
-		});
+		const response = await get("/foo");
+
+		expect(response.statusCode).toBe(200);
+		expect(response.body.reqId).toBeDefined();
+
+		done();
 	});
 
-	it("should be possible to send content type containing json", done => {
+	it("should be possible to send content type containing json", async done => {
 		bus.subscribe("http.post.content-type-json", req => {
 			expect(req.data.hello).toBe(1337);
 			return {
@@ -344,20 +323,19 @@ describe("API Gateway", () => {
 			};
 		});
 
-		post(
+		const res = await post(
 			"/content-type-json",
 			{
 				"content-type": "application/vnd.contentful.management.v1+json"
 			},
 			{
 				hello: 1337
-			},
-			(error, response, body) => {
-				expect(response.statusCode).toBe(200);
-				expect(body.reqId).toBeDefined();
-				done();
-			}
-		);
+			});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.body.reqId).toBeDefined();
+
+		done();
 	});
 
 	it("should forward POST request with multipart via http to url specified by bus.subscribe", done => {
@@ -371,7 +349,7 @@ describe("API Gateway", () => {
 		app.post("/foobar", (req, res) => {
 			let form = new multiparty.Form();
 
-			form.parse(req, function(err, fields, files) {
+			form.parse(req, function (err, fields, files) {
 				expect(files.file[0].fieldName).toBe("file");
 				expect(files.file[0].originalFilename).toBe("a-large-file.jpg");
 				expect(files.file[0].size).toBe(86994);
@@ -423,7 +401,7 @@ describe("API Gateway", () => {
 			});
 		});
 
-		doFormDataRequest("/foo?hej=1", function(error, response, respBody) {
+		doFormDataRequest("/foo?hej=1", function (error, response, respBody) {
 			let body = JSON.parse(respBody);
 			expect(body.status).toBe(200);
 			expect(body.reqId).toBe(checkForReqId);
@@ -453,7 +431,7 @@ describe("API Gateway", () => {
 			});
 		});
 
-		doFormDataRequest("/foo", function(error, response, respBody) {
+		doFormDataRequest("/foo", function (error, response, respBody) {
 			let body = JSON.parse(respBody);
 
 			expect(response.statusCode).toBe(500);
@@ -467,44 +445,70 @@ describe("API Gateway", () => {
 		});
 	});
 
-	function get(path, headers, cb) {
-		if (typeof headers === "function") {
-			cb = headers;
-		}
-		doRequest("GET", path, headers, true, cb);
+	describe("XML support", () => {
+
+		// it("should POST XML body", () => {
+
+		// 	bus.subscribe("http.post.xml", req => {
+		// 		expect(req.data.hello).toBe(1337);
+		// 		return {
+		// 			status: 200
+		// 		};
+		// 	});
+
+		// 	post(
+		// 		"/xml",
+		// 		{
+		// 			"content-type": "application/vnd.contentful.management.v1+json"
+		// 		},
+		// 		{
+		// 			hello: 1337
+		// 		},
+		// 		(error, response, body) => {
+		// 			expect(response.statusCode).toBe(200);
+		// 			expect(body.reqId).toBeDefined();
+		// 			done();
+		// 		}
+		// 	);
+
+
+		// });
+	});
+
+	function get(path, headers) {
+		return doRequest({ method: "GET", path, headers });
 	}
 
-	function post(path, headers, json, cb) {
-		if (typeof headers === "function") {
-			cb = headers;
-		}
-		doRequest("POST", path, headers, json, cb);
+	function post(path, headers, json) {
+		return doRequest({ method: "POST", path, headers, json });
 	}
 
-	function put(path, headers, json, cb) {
-		if (typeof headers === "function") {
-			cb = headers;
-		}
-		doRequest("PUT", path, headers, json, cb);
-	}
+	// function postXML(path, headers, xmlString, cb) {
+	// 	if (typeof headers === "function") {
+	// 		cb = headers;
+	// 	}
+	// 	doRequest({method: "POST", path, headers, xmlString });
+	// }
 
-	function del(path, headers, cb) {
-		if (typeof headers === "function") {
-			cb = headers;
-		}
-		doRequest("DELETE", path, {}, true, cb);
-	}
+	function doRequest({ method, path, headers = {}, json = null }) {
+		return new Promise((resolve, reject) => {
+			request(
+				{
+					uri: baseUri + path,
+					method: method,
+					headers: headers,
+					json: json || true
+				},
+				(err, response, body) => {
+					if (err) {
+						return reject(err);
+					}
+					response.body = body;
+					resolve(response);
+				}
+			);
 
-	function doRequest(method, path, headers, json, cb) {
-		request(
-			{
-				uri: baseUri + path,
-				method: method,
-				headers: headers,
-				json: json || true
-			},
-			cb
-		);
+		})
 	}
 
 	function doFormDataRequest(path, cb) {
