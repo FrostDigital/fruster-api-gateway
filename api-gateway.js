@@ -73,7 +73,13 @@ function createExpressApp() {
 			limit: conf.maxRequestSize
 		})
 	);
-	app.use(bodyParser.text({ type: ["text/*", "application/xml"], defaultCharset: "utf-8" }));
+	app.use(
+		bodyParser.text({
+			type: ["text/*", "application/xml"],
+			defaultCharset: "utf-8",
+			limit: conf.maxRequestSize
+		})
+	);
 	app.use(bodyParser.urlencoded({ extended: false }));
 	app.use(cookieParser());
 	app.use(bearerToken());
