@@ -516,7 +516,7 @@ describe("API Gateway", () => {
 					headers: {
 						"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 					},
-					data: Buffer.from(xlsxFile).toString("base64")
+					data: xlsxFile
 				};
 			});
 
@@ -526,7 +526,7 @@ describe("API Gateway", () => {
 			expect(response.headers["x-fruster-req-id"]).toBeDefined();
 			expect(response.body).toBe(xlsxFile);
 
-			// fs.writeFileSync("./spec/test-output.xlsx", Buffer.from(xlsxFile, "binary"));
+			fs.writeFileSync("./spec/test-output.xlsx", Buffer.from(xlsxFile, "binary"));
 
 			done();
 		});

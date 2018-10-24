@@ -342,7 +342,7 @@ function sendHttpResponse(reqId, busResponse, httpResponse) {
 	if (isTextResponse(busResponse)) {
 		httpResponse.send(busResponse.data);
 	} else if (isBinaryResponse(busResponse)) {
-		httpResponse.send(Buffer.from(busResponse.data, "base64"));
+		httpResponse.send(busResponse.data);
 	} else {
 		httpResponse.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
 	}
