@@ -356,8 +356,6 @@ describe("API Gateway", () => {
 
 				fs.unlinkSync(files.file[0].path);
 
-				console.log("sending");
-
 				res.send({
 					reqId: JSON.parse(req.headers.data).reqId,
 					status: 200
@@ -510,30 +508,33 @@ describe("API Gateway", () => {
 		});
 
 		it("should respond with XLSX file", async (done) => {
+			const base64EncodedFile = xlsxFileBuffer.toString("base64");
+
 			bus.subscribe("http.get.xlsx", req => {
 				return {
 					status: 200,
 					headers: {
 						"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 					},
-					data: xlsxFile
+					data: base64EncodedFile
 				};
 			});
 
-			const response = await get("/xlsx");
+			const response = await get("/xlsx", {}, { encoding: null });
 
 			expect(response.statusCode).toBe(200);
 			expect(response.headers["x-fruster-req-id"]).toBeDefined();
-			expect(response.body).toBe(xlsxFile);
+			expect(response.body.length).toBe(xlsxFileBuffer.length);
+			expect(response.headers["content-type"]).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=binary")
 
-			fs.writeFileSync("./spec/test-output.xlsx", Buffer.from(xlsxFile, "binary"));
+			fs.writeFileSync("./spec/test-output.xlsx", response.body);
 
 			done();
 		});
 	});
 
-	function get(path, headers) {
-		return doRequest({ method: "GET", path, headers });
+	function get(path, headers, reqOpts = {}) {
+		return doRequest({ method: "GET", path, headers, reqOpts });
 	}
 
 	function post(path, headers, json) {
@@ -545,10 +546,11 @@ describe("API Gateway", () => {
 		return doRequest({ method: "POST", path, headers, rawBody: xmlString });
 	}
 
-	function doRequest({ method, path, headers = {}, json = null, rawBody = null }) {
+	function doRequest({ method, path, headers = {}, json = null, rawBody = null, reqOpts = {} }) {
 		return new Promise((resolve, reject) => {
 
-			const reqOpts = {
+			reqOpts = {
+				...reqOpts,
 				uri: baseUri + path,
 				method: method,
 				headers: headers
@@ -608,4 +610,4 @@ describe("API Gateway", () => {
 	}
 });
 
-const xlsxFile = fs.readFileSync("./spec/xlsx.xlsx").toString("binary");
+const xlsxFileBuffer = fs.readFileSync("./spec/xlsx.xlsx", null); // null encoding creates a buffer
