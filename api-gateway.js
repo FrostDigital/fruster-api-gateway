@@ -155,7 +155,11 @@ function handleBusErrorResponse(err, httpRes, reqId) {
 		err.status = 404;
 		httpRes.status(404);
 	} else {
-		httpRes.status(err.status);
+		httpRes.status(err.status || 500);
+	}
+
+	if (httpRes.statusCode > 499) {
+		log.error(err);
 	}
 
 	setRequestId(reqId, err);
@@ -342,7 +346,11 @@ function sendHttpResponse(reqId, busResponse, httpResponse) {
 	if (isTextResponse(busResponse)) {
 		httpResponse.send(busResponse.data);
 	} else if (isBinaryResponse(busResponse)) {
-		httpResponse.send(busResponse.data);
+		const contentType = getContentType(busResponse);
+
+		httpResponse
+			.set("Content-Type", contentType + "; charset=binary")
+			.send(Buffer.from(busResponse.data, "base64"));
 	} else {
 		httpResponse.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
 	}
