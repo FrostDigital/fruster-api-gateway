@@ -75,7 +75,7 @@ function createExpressApp() {
 	);
 	app.use(
 		bodyParser.text({
-			type: ["text/*", "application/xml"],
+			type: constants.TEXT_CONTENT_TYPES,
 			defaultCharset: "utf-8",
 			limit: conf.maxRequestSize
 		})
@@ -85,7 +85,7 @@ function createExpressApp() {
 	app.use(bearerToken());
 	app.use(noCacheMiddleware());
 
-	app.get(["/", "/health"], function (req, res) {
+	app.get(["/", "/health"], (req, res) => {
 		res.json({
 			status: "Alive since " + dateStarted
 		});
@@ -326,6 +326,8 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
  * Transfers status, headers and data from internal bus response to
  * http response and sends it.
  *
+ * Can handle text based and binary data if such content type is provided.
+ *
  * @param {String} reqId
  * @param {Object} busResponse
  * @param {Object} httpResponse
@@ -339,6 +341,8 @@ function sendHttpResponse(reqId, busResponse, httpResponse) {
 
 	if (isTextResponse(busResponse)) {
 		httpResponse.send(busResponse.data);
+	} else if (isBinaryResponse(busResponse)) {
+		httpResponse.send(Buffer.from(busResponse.data, "base64"));
 	} else {
 		httpResponse.json(conf.unwrapMessageData ? busResponse.data : utils.sanitizeResponse(busResponse));
 	}
@@ -361,8 +365,22 @@ function isMultipart(httpReq) {
  * @param {Object} busResponse
  */
 function isTextResponse(busResponse) {
-	const contentType = busResponse.headers && (busResponse.headers["content-type"] || busResponse.headers["Content-Type"]) || "";
-	return contentType.indexOf("text/") === 0 || contentType === "application/xml";
+	const contentType = getContentType(busResponse);
+	return constants.TEXT_CONTENT_TYPES.includes(contentType);
+}
+
+/**
+ * Checks if bus response data is base64 encoded binary string.
+ *
+ * @param {Object} busResponse
+ */
+function isBinaryResponse(busResponse) {
+	const contentType = getContentType(busResponse);
+	return constants.BINARY_CONTENT_TYPES.includes(contentType);
+}
+
+function getContentType(busResponse) {
+	return busResponse.headers && (busResponse.headers["content-type"] || busResponse.headers["Content-Type"]) || "";
 }
 
 module.exports = {

@@ -445,7 +445,7 @@ describe("API Gateway", () => {
 		});
 	});
 
-	describe("XML body support", () => {
+	describe("handling non JSON content types", () => {
 
 		it("should POST XML body when content-type is text/xml", async (done) => {
 			const xmlSnippet = "<Foo bar=\"1\" />";
@@ -505,6 +505,28 @@ describe("API Gateway", () => {
 			expect(response.statusCode).toBe(200);
 			expect(response.headers["x-fruster-req-id"]).toBeDefined();
 			expect(response.body).toBe(xmlSnippet);
+
+			done();
+		});
+
+		it("should respond with XLSX file", async (done) => {
+			bus.subscribe("http.get.xlsx", req => {
+				return {
+					status: 200,
+					headers: {
+						"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+					},
+					data: Buffer.from(xlsxFile).toString("base64")
+				};
+			});
+
+			const response = await get("/xlsx");
+
+			expect(response.statusCode).toBe(200);
+			expect(response.headers["x-fruster-req-id"]).toBeDefined();
+			expect(response.body).toBe(xlsxFile);
+
+			// fs.writeFileSync("./spec/test-output.xlsx", Buffer.from(xlsxFile, "binary"));
 
 			done();
 		});
@@ -585,3 +607,5 @@ describe("API Gateway", () => {
 		);
 	}
 });
+
+const xlsxFile = fs.readFileSync("./spec/xlsx.xlsx").toString("binary");
