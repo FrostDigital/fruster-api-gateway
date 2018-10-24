@@ -2,3 +2,5 @@ node_modules
 npm-debug.log
 .health
 .vscode
+
+spec/test-output.xlsx
