@@ -251,18 +251,18 @@ function sendInternalRequest(httpReq) {
 				.request(subject, interceptedReq, ms(conf.busTimeout))
 				.then(interceptResponse)
 				.catch(err => interceptResponse(err, true));
+		}
 
-			function interceptResponse(response, messageIsException) {
-				if (response.error) response.data = interceptedReq.data;
+		function interceptResponse(response, messageIsException) {
+			if (response.error) response.data = interceptedReq.data;
 
-				return invokeResponseInterceptors(
-					subject,
-					prepareInterceptResponseMessage(response, message),
-					messageIsException
-				)
-					.then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
-					.catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
-			}
+			return invokeResponseInterceptors(
+				subject,
+				prepareInterceptResponseMessage(response, message),
+				messageIsException
+			)
+				.then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
+				.catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
 		}
 	});
 }
