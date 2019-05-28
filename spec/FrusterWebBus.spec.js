@@ -39,11 +39,10 @@ describe("FrusterWebBus", () => {
 							}
 						};
 					}
+
 					return {
 						status: 200,
-						data: {
-							hello: "hello " + req.params.userId
-						}
+						data: { hello: "hello " + req.params.userId }
 					};
 				}
 			});
@@ -64,19 +63,13 @@ describe("FrusterWebBus", () => {
 					}
 					return {
 						status: 200,
-						data: {
-							hello: "hello " + req.params.userId
-						}
+						data: { hello: "hello " + req.params.userId }
 					};
 				}
 			});
 		},
 		mockNats: true,
-		afterStart: connection => {
-			webBus = new FrusterWebBus(server, {
-				test: true
-			});
-		}
+		afterStart: () => webBus = new FrusterWebBus(server, { test: true })
 	});
 
 	afterEach(done => {
@@ -114,18 +107,12 @@ describe("FrusterWebBus", () => {
 	it("should be possible to connect to web bus", done => {
 		const messageToSend = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -137,23 +124,12 @@ describe("FrusterWebBus", () => {
 			done();
 		});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
-		setTimeout(() => {
-			bus.request("ws.out.hello-there-id.hello", messageToSend);
-		}, 100);
+		setTimeout(() => bus.request("ws.out.hello-there-id.hello", messageToSend), 100);
 	});
 
 	it("should be possible to connect to web bus as public user", done => {
-		const messageToSend = {
-			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
-		};
-
 		registerMockAuthServiceResponse();
 
 		const ws = new WebSocket(webSocketBaseUri, [], {});
@@ -165,9 +141,7 @@ describe("FrusterWebBus", () => {
 			done();
 		});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		setTimeout(() => {
 			ws.send(
@@ -185,13 +159,6 @@ describe("FrusterWebBus", () => {
 	});
 
 	it("should not be possible to make requests to endpoints that require user to be logged in as public user connected to websocket", done => {
-		const messageToSend = {
-			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
-		};
-
 		registerMockAuthServiceResponse();
 
 		const ws = new WebSocket(webSocketBaseUri, [], {});
@@ -205,9 +172,7 @@ describe("FrusterWebBus", () => {
 			done();
 		});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		setTimeout(() => {
 			ws.send(
@@ -227,18 +192,12 @@ describe("FrusterWebBus", () => {
 	it("should be possible to connect to web bus using Authorization header", done => {
 		const messageToSend = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				Authorization: "Bearer hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { Authorization: "Bearer hello" } });
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -250,36 +209,24 @@ describe("FrusterWebBus", () => {
 			done();
 		});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
-		setTimeout(() => {
-			bus.request("ws.out.hello-there-id.hello", messageToSend);
-		}, 100);
+		setTimeout(() => bus.request("ws.out.hello-there-id.hello", messageToSend), 100);
 	});
 
 	it("should only get messages addressed to user's id", done => {
 		const messageToReceive = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 		const messageNotToReceive = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data2"
-			}
+			data: { some: "data2" }
 		};
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -296,9 +243,7 @@ describe("FrusterWebBus", () => {
 			done();
 		});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		setTimeout(() => {
 			bus.request("ws.out.hello2-there-id.hello", messageNotToReceive).then(() =>
@@ -311,9 +256,7 @@ describe("FrusterWebBus", () => {
 		const req = {
 			to: [mockUserId, "some-other-user", "some-other-user2", mockUserId2],
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 
 		registerMockAuthServiceResponse();
@@ -321,44 +264,29 @@ describe("FrusterWebBus", () => {
 		let wsGotMessage = false;
 		let ws2GotMessage = false;
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
-		const ws2 = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello2"
-			}
-		});
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
-		ws2.on("close", (code, reason) => {
-			done.fail(`websocket2 closed: ${code} ${reason}`);
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+		const ws2 = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello2" } });
 
-		ws.on("message", json => {
-			wsGotMessage = true;
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
+		ws2.on("close", (code, reason) => done.fail(`websocket2 closed: ${code} ${reason}`));
+
+		ws.on("message", json => wsGotMessage = true);
 		ws2.on("message", json => {
 			ws2GotMessage = true;
 
-			if (wsGotMessage && ws2GotMessage) done();
-			else done.fail();
+			if (wsGotMessage && ws2GotMessage)
+				done();
+			else
+				done.fail();
 		});
 
-		setTimeout(() => {
-			bus.request("ws.out.*.hello", req);
-		}, 100);
+		setTimeout(() => bus.request("ws.out.*.hello", req), 100);
 	});
 
 	it("should allow broadcasts", done => {
 		const message = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 
 		let wsGotMessage = false;
@@ -366,24 +294,12 @@ describe("FrusterWebBus", () => {
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
-		const ws2 = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+		const ws2 = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
-		ws2.on("close", (code, reason) => {
-			done.fail(`websocket2 closed: ${code} ${reason}`);
-		});
+		ws2.on("close", (code, reason) => done.fail(`websocket2 closed: ${code} ${reason}`));
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -405,20 +321,19 @@ describe("FrusterWebBus", () => {
 		});
 
 		function assertMessageReceived() {
-			if (wsGotMessage && ws2GotMessage) done();
+			if (wsGotMessage && ws2GotMessage)
+				done();
 		}
 
-		setTimeout(() => {
-			bus.request("ws.out.*.new-message", message);
-		}, 100);
+		setTimeout(() => bus.request("ws.out.*.new-message", message), 100);
 	});
 
-	it("should allow broadcasts to public users", done => {
+	it("should allow broadcasts using public endpoint", done => {
+		conf.allowPublicWebsocketConnections = true;
+
 		const message = {
 			reqId: uuid.v4(),
-			data: {
-				some: "data"
-			}
+			data: { some: "data" }
 		};
 
 		let wsGotMessage = false;
@@ -426,19 +341,59 @@ describe("FrusterWebBus", () => {
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], {});
 		const ws2 = new WebSocket(webSocketBaseUri, [], {});
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
+		ws2.on("close", (code, reason) => done.fail(`websocket2 closed: ${code} ${reason}`));
+
+		ws.on("message", json => {
+			const message = JSON.parse(json.toString());
+
+			wsGotMessage = true;
+
+			assertMessageReceived(message);
 		});
-		ws2.on("close", (code, reason) => {
-			done.fail(`websocket2 closed: ${code} ${reason}`);
+
+		ws2.on("message", (json) => {
+			const message = JSON.parse(json.toString());
+			ws2GotMessage = true;
+
+			assertMessageReceived(message);
 		});
+
+		/**
+		 * @param {Object} message
+		 */
+		function assertMessageReceived(message) {
+			expect(message.subject).toBe("ws.out.public.new-message");
+			expect(message.reqId).toBe(message.reqId);
+			expect(message.data.some).toBe(message.data.some);
+			expect(message.subject).toBe(message.subject);
+
+			if (wsGotMessage && ws2GotMessage)
+				done();
+		}
+
+		setTimeout(() => bus.request("ws.out.public.new-message", message), 100);
+	});
+
+	it("should allow broadcasts to public users", done => {
+		const message = {
+			reqId: uuid.v4(),
+			data: { some: "data" }
+		};
+
+		let wsGotMessage = false;
+		let ws2GotMessage = false;
+
+		registerMockAuthServiceResponse();
+
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
+		const ws2 = new WebSocket(webSocketBaseUri, [], {});
+
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
+		ws2.on("close", (code, reason) => done.fail(`websocket2 closed: ${code} ${reason}`));
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -454,13 +409,13 @@ describe("FrusterWebBus", () => {
 		ws2.on("message", json => {
 			ws2GotMessage = true;
 
-			if (wsGotMessage && ws2GotMessage) done();
-			else done.fail();
+			if (wsGotMessage && ws2GotMessage)
+				done();
+			else
+				done.fail();
 		});
 
-		setTimeout(() => {
-			bus.request("ws.out.*.new-message", message);
-		}, 100);
+		setTimeout(() => bus.request("ws.out.*.new-message", message), 100);
 	});
 
 	it("should be possible to send message to server via web bus", async done => {
@@ -470,15 +425,9 @@ describe("FrusterWebBus", () => {
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		ws.on("message", json => {
 			const response = JSON.parse(json.toString());
@@ -487,9 +436,7 @@ describe("FrusterWebBus", () => {
 			expect(response.data).toBeDefined("response.data");
 			expect(response.data.hello).toBe("hello BOB", "response.data.hello");
 			expect(response.reqId).toBe(reqId, "response.reqId");
-			expect(response.subject).toBe(
-				`res.${transactionId}.${wsEndpointSubjectMustBeLoggedIn.replace(":userId", userId)}`
-			);
+			expect(response.subject).toBe(`res.${transactionId}.${wsEndpointSubjectMustBeLoggedIn.replace(":userId", userId)}`);
 
 			done();
 		});
@@ -502,12 +449,8 @@ describe("FrusterWebBus", () => {
 						message: {
 							reqId: reqId,
 							transactionId: transactionId,
-							data: {
-								customMessage: "1337"
-							},
-							query: {
-								pageSize: 12
-							}
+							data: { customMessage: "1337" },
+							query: { pageSize: 12 }
 						}
 					})
 				)
@@ -522,15 +465,9 @@ describe("FrusterWebBus", () => {
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		ws.on("message", json => {
 			const response = JSON.parse(json.toString());
@@ -554,9 +491,7 @@ describe("FrusterWebBus", () => {
 								shouldFail: true,
 								customMessage: "1337"
 							},
-							query: {
-								pageSize: 12
-							}
+							query: { pageSize: 12 }
 						}
 					})
 				)
@@ -569,15 +504,9 @@ describe("FrusterWebBus", () => {
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
-		ws.on("close", (code, reason) => {
-			done.fail(`websocket closed: ${code} ${reason}`);
-		});
+		ws.on("close", (code, reason) => done.fail(`websocket closed: ${code} ${reason}`));
 
 		ws.on("message", json => {
 			const message = JSON.parse(json.toString());
@@ -603,15 +532,9 @@ describe("FrusterWebBus", () => {
 	});
 
 	it("should close connection when unregister endpoint with jwt token is called", async done => {
-		const reqId = uuid.v4();
-
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
 		ws.on("close", (code, reason) => {
 			expect(reason).toBe(constants.websocketErrorCodes.USER_DISCONNECTED, "reason");
@@ -621,23 +544,15 @@ describe("FrusterWebBus", () => {
 		ws.on("open", async () => {
 			await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
 				reqId: "hello",
-				data: {
-					jwt: "hello"
-				}
+				data: { jwt: "hello" }
 			});
 		});
 	});
 
 	it("should close connection when unregister endpoint with userId is called", async done => {
-		const reqId = uuid.v4();
-
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {
-				cookie: "jwt=hello"
-			}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: { cookie: "jwt=hello" } });
 
 		ws.on("close", (code, reason) => {
 			expect(reason).toBe(constants.websocketErrorCodes.USER_DISCONNECTED, "reason");
@@ -647,22 +562,17 @@ describe("FrusterWebBus", () => {
 		ws.on("open", async () => {
 			await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
 				reqId: "hello",
-				data: {
-					userId: mockUserId
-				}
+				data: { userId: mockUserId }
 			});
 		});
 	});
 
 	it("should not be possible to connect to websocket as public user if allowPublicWebsocketConnections is set to false", async done => {
 		conf.allowPublicWebsocketConnections = false;
-		const reqId = uuid.v4();
 
 		registerMockAuthServiceResponse();
 
-		const ws = new WebSocket(webSocketBaseUri, [], {
-			headers: {}
-		});
+		const ws = new WebSocket(webSocketBaseUri, [], { headers: {} });
 
 		ws.on("close", (code, reason) => {
 			conf.allowPublicWebsocketConnections = true;
@@ -675,9 +585,7 @@ describe("FrusterWebBus", () => {
 		try {
 			await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
 				reqId: "hello",
-				data: {
-					userId: "ram-jam"
-				}
+				data: { userId: "ram-jam" }
 			});
 
 			done();
@@ -691,9 +599,7 @@ describe("FrusterWebBus", () => {
 		try {
 			await bus.request(FrusterWebBus.endpoints.UNREGISTER_CLIENT, {
 				reqId: "hello",
-				data: {
-					ram: mockUserId
-				}
+				data: { ram: mockUserId }
 			});
 		} catch (err) {
 			expect(err.error.code).toBe("BAD_REQUEST", "err.error.code");
