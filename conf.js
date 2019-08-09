@@ -159,7 +159,15 @@ module.exports = {
 	 *
 	 * Default: /auth/cookie,/auth/token
 	 */
-	publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(",")
+	publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(","),
+
+
+	/**
+	 * Whether or not to do lowercase on http subjects
+	 *
+	 * Default: true
+	 */
+	httpSubjectToLowerCase: parseBool(process.env.HTTP_SUBJECT_TO_LOWERCASE, true),
 };
 
 function parseBool(str, defaultVal) {
