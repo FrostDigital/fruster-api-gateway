@@ -11,7 +11,7 @@ module.exports = {
 	 *
 	 */
 	createSubject: req => {
-		const method = req.method;
+		const method = req.method.toLowerCase();
 		const path = req.path.replace(ESCAPE_DOTS_REGEPX, "{dot}").split("/");
 
 		let subject = ["http", method]
