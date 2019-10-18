@@ -1,4 +1,5 @@
 const ESCAPE_DOTS_REGEPX = /\./g;
+const conf = require("./conf");
 
 module.exports = {
 	/**
@@ -10,16 +11,20 @@ module.exports = {
 	 *
 	 */
 	createSubject: req => {
-		const method = req.method;
+		const method = req.method.toLowerCase();
 		const path = req.path.replace(ESCAPE_DOTS_REGEPX, "{dot}").split("/");
 
-		return ["http", method]
+		let subject = ["http", method]
 			.concat(path)
 			.filter(function (val) {
 				return val;
 			})
-			.join(".")
-			.toLowerCase();
+			.join(".");
+
+		if (conf.httpSubjectToLowerCase)
+			subject = subject.toLowerCase();
+
+		return subject;
 	},
 
 	/**
