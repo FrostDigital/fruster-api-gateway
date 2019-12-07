@@ -38,8 +38,5 @@
 		"jasmine-spec-reporter": "^4.2.1",
 		"multiparty": "^4.1.4",
 		"request": "^2.86.0"
-	},
-	"engines": {
-		"node": "10.5.0"
 	}
 }
