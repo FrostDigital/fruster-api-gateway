@@ -446,7 +446,9 @@ async function createInfluxRepo() {
 	try {
 		influx = await new InfluxRepo({
 			url: conf.influxDbUrl,
-			writeInterval: conf.influxWriteInterval
+			writeInterval: conf.influxWriteInterval,
+			ipLookup: conf.influxLookupIp,
+			ipLookupDbUrl: conf.ipLookUpDbUrl
 		}).init();
 	} catch (err) {
 		log.warn(
