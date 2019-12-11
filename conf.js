@@ -83,7 +83,7 @@ module.exports = {
 	 *
 	 * Default: 4w
 	 */
-	statsTTL: Number(ms(process.env.STATS_TTL || "4w") / 1000).toFixed(0),
+	statsTTL: parseInt((ms(process.env.STATS_TTL || "4w") / 1000) + ""),
 
 	/**
 	 * Max size of requests that we can handle.
