@@ -79,6 +79,24 @@ module.exports = {
 	influxWriteInterval: ms(process.env.INFLUX_WRITE_INTERVAL || "30s"),
 
 	/**
+	 * If ip address in `X-Forward-For` will be looked up
+	 * and translate into a location before written to influxdb.
+	 *
+	 * Will use maxminds free database.
+	 */
+	influxLookupIp: process.env.INFLUX_LOOKUP_IP === "true",
+
+	/**
+	 * URL pointing to maxmind ip database.
+	 *
+	 * Defaults to maxminds free city database:
+	 * https://dev.maxmind.com/geoip/geoip2/geolite2/
+	 *
+	 * Only used if INFLUXDB_URL and INFLUX_LOOKUP_IP is set.
+	 */
+	ipLookUpDbUrl: process.env.IP_LOOKUP_DB_URL || "https://fruster-ip-lookup-db.s3-eu-west-1.amazonaws.com/GeoLite2-City.mmdb",
+
+	/**
 	 * For how long time HTTP response time stats should be saved.
 	 *
 	 * Default: 4w
@@ -160,7 +178,6 @@ module.exports = {
 	 * Default: /auth/cookie,/auth/token
 	 */
 	publicRoutes: (process.env.PUBLIC_ROUTES || "/auth/cookie,/auth/token").split(","),
-
 
 	/**
 	 * Whether or not to do lowercase on http subjects
