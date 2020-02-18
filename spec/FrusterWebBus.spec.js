@@ -167,7 +167,7 @@ describe("FrusterWebBus", () => {
 			const message = JSON.parse(json.toString());
 
 			expect(message.status).toBe(403, "message.status");
-			expect(message.error.code).toBe("PERMISSION_DENIED", "message.error.code");
+			expect(message.error.code).toBe("MUST_BE_LOGGED_IN", "message.error.code");
 
 			done();
 		});
