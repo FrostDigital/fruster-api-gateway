@@ -384,7 +384,9 @@ module.exports = {
 			log.info("Enabling stats module, view by visiting /statz");
 			const db = await mongo.connect(mongoUrl);
 			responseTimeRepo = new ResponseTimeRepo(db);
-			await createIndexes(db);
+
+			if (!process.env.CI)
+				await createIndexes(db);
 		}
 
 		if (conf.influxDbUrl) {
