@@ -416,10 +416,14 @@ module.exports = {
 };
 
 async function createIndexes(db) {
-	await db.collection(constants.collections.RESPONSE_TIME).createIndex(
-		{ createdAt: 1 },
-		{ expireAfterSeconds: conf.statsTTL }
-	);
+	try {
+		await db.collection(constants.collections.RESPONSE_TIME).createIndex(
+			{ createdAt: 1 },
+			{ expireAfterSeconds: conf.statsTTL }
+		);
+	} catch (err) {
+		log.warn(err);
+	}
 }
 
 /**
