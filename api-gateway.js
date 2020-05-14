@@ -3,7 +3,7 @@ const mongo = require("mongodb");
 const http = require("http");
 const ms = require("ms");
 const request = require("request");
-const Promise = require("bluebird");
+const { Promise: BPromise } = require("bluebird");
 const log = require("fruster-log");
 const bus = require("fruster-bus");
 const utils = require("./utils");
@@ -48,14 +48,9 @@ const interceptAction = {
 function createExpressApp() {
 	const app = express();
 
-	app.use(favicon(__dirname + "/favicon.png"));
+	app.use(favicon(__dirname + "/favicon.ico"));
 	app.use(reqIdMiddleware());
-	app.use(
-		httpMetricMiddleware({
-			influxRepo,
-			responseTimeRepo
-		})
-	);
+	app.use(httpMetricMiddleware({ influxRepo, responseTimeRepo }));
 	app.use(
 		cors({
 			origin: conf.allowOrigin,
@@ -86,9 +81,12 @@ function createExpressApp() {
 	app.use(noCacheMiddleware());
 
 	app.get(["/", "/health"], (req, res) => {
-		res.json({
-			status: "Alive since " + dateStarted
-		});
+		res.json({ status: "Alive since " + dateStarted });
+	});
+
+	app.get("/robots.txt", function (req, res) {
+		res.type('text/plain');
+		res.send("User-agent: *\nDisallow: /");
 	});
 
 	if (conf.enableStats) {
@@ -106,19 +104,15 @@ function createExpressApp() {
 	app.use((err, req, res, next) => {
 		res.status(err.status || 500);
 
-		let json = {
-			message: err.message
-		};
+		let json = { message: err.message };
 
-		if (conf.printStacktrace) {
+		if (conf.printStacktrace)
 			json.stacktrace = err.stack;
-		}
 
 		res.json(json);
 
-		if (res.status === 500) {
+		if (res.status === 500)
 			log.error(err.stack);
-		}
 	});
 
 	return app;
@@ -148,9 +142,9 @@ async function handleReq(httpReq, httpRes, next) {
 
 function handleBusErrorResponse(err, httpRes, reqId) {
 	/*
-     * Translates 408 timeout to 404 since timeout indicates that no one
-     * subscribed on subject
-     */
+	 * Translates 408 timeout to 404 since timeout indicates that no one
+	 * subscribed on subject
+	 */
 	if (err.status === 408) {
 		err.status = 404;
 		httpRes.status(404);
@@ -158,9 +152,8 @@ function handleBusErrorResponse(err, httpRes, reqId) {
 		httpRes.status(err.status || 500);
 	}
 
-	if (httpRes.statusCode > 499) {
+	if (httpRes.statusCode > 499)
 		log.error(err);
-	}
 
 	setRequestId(reqId, err);
 
@@ -172,7 +165,7 @@ function invokeRequestInterceptors(subject, message) {
 		return interceptor.type === "request" && interceptor.match(subject);
 	});
 
-	return Promise.reduce(
+	return BPromise.reduce(
 		matchedInterceptors,
 		(_message, interceptor) => {
 			if (_message.interceptAction === interceptAction.respond) {
@@ -202,12 +195,12 @@ function invokeResponseInterceptors(subject, message, messageIsException) {
 	/** If no interceptors allowing exceptions were found we throw the error for it to be taken care of normally */
 	if (matchedInterceptors.length === 0 && messageIsException) throw cleanInterceptedResponse(message, message);
 
-	return Promise.reduce(
+	return BPromise.reduce(
 		matchedInterceptors,
 		(_message, interceptor) => {
-			if (_message.interceptAction === interceptAction.respond) {
+			if (_message.interceptAction === interceptAction.respond)
 				return _message;
-			}
+
 			return bus.request({
 				subject: interceptor.targetSubject,
 				message: _message,
@@ -294,11 +287,9 @@ function cleanInterceptedResponse(response, interceptedResponse) {
 
 function sendInternalMultipartRequest(subject, message, httpReq) {
 	return bus.request(subject, message, ms(conf.busTimeout), true).then(optionsRes => {
-		const httpOptions = optionsRes.data.http;
+		const { url } = optionsRes.data.http;
 
-		let requestOptions = {
-			uri: httpOptions.url
-		};
+		let requestOptions = { uri: url };
 
 		httpReq.headers.data = utils.convertJsonToHttpHeaderString(message);
 
@@ -314,11 +305,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 							`Got error response when streaming multipart request to ${requestOptions.uri}:`,
 							error
 						);
-						let errorObj = {
-							status: 500,
-							error: error
-						};
-						reject(errorObj);
+						reject({ status: 500, error });
 					}
 				})
 			);
@@ -397,7 +384,9 @@ module.exports = {
 			log.info("Enabling stats module, view by visiting /statz");
 			const db = await mongo.connect(mongoUrl);
 			responseTimeRepo = new ResponseTimeRepo(db);
-			createIndexes(db);
+
+			if (!process.env.CI)
+				await createIndexes(db);
 		}
 
 		if (conf.influxDbUrl) {
@@ -426,15 +415,15 @@ module.exports = {
 	}
 };
 
-function createIndexes(db) {
-	db.collection(constants.collections.RESPONSE_TIME).createIndex(
-		{
-			createdAt: 1
-		},
-		{
-			expireAfterSeconds: conf.statsTTL
-		}
-	);
+async function createIndexes(db) {
+	try {
+		await db.collection(constants.collections.RESPONSE_TIME).createIndex(
+			{ createdAt: 1 },
+			{ expireAfterSeconds: conf.statsTTL }
+		);
+	} catch (err) {
+		log.warn(err);
+	}
 }
 
 /**
@@ -446,7 +435,9 @@ async function createInfluxRepo() {
 	try {
 		influx = await new InfluxRepo({
 			url: conf.influxDbUrl,
-			writeInterval: conf.influxWriteInterval
+			writeInterval: conf.influxWriteInterval,
+			ipLookup: conf.influxLookupIp,
+			ipLookupDbUrl: conf.ipLookUpDbUrl
 		}).init();
 	} catch (err) {
 		log.warn(
