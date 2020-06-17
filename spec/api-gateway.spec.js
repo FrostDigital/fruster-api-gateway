@@ -164,6 +164,8 @@ describe("API Gateway", () => {
 	describe("Tokens", () => {
 		it("should return 403 if validation of JWT cookie failed", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
+				expect(req.headers).toBeDefined("should send headers to auth service");
+
 				return {
 					status: 403,
 					error: {
@@ -183,6 +185,8 @@ describe("API Gateway", () => {
 		it("should return 403 if validation of JWT in auth header failed", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("a-token");
+				expect(req.headers).toBeDefined("should send headers to auth service");
+
 				return {
 					status: 403,
 					error: {
@@ -202,6 +206,8 @@ describe("API Gateway", () => {
 		it("should set user data with decoded jwt cookie", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("acookie");
+				expect(req.headers).toBeDefined("should send headers to auth service");
+
 				return {
 					status: 200,
 					data: "decoded-cookie"
@@ -230,6 +236,8 @@ describe("API Gateway", () => {
 
 			bus.subscribe("auth-service.decode-token", req => {
 				done.fail("Auth service should not have been invoked");
+				expect(req.headers).toBeDefined("should send headers to auth service");
+
 				return {
 					status: 200,
 					data: "decoded-cookie"
@@ -275,6 +283,8 @@ describe("API Gateway", () => {
 		it("should set user data with decoded jwt cookie", async done => {
 			bus.subscribe("auth-service.decode-token", req => {
 				expect(req.data).toBe("acookie");
+				expect(req.headers).toBeDefined("should send headers to auth service");
+
 				return {
 					status: 200,
 					data: "decoded-cookie"
