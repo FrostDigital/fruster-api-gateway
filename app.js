@@ -1,9 +1,10 @@
 const conf = require("./conf");
 const log = require("fruster-log");
+const bus = require("fruster-bus");
 const apiGateway = require("./api-gateway");
 const FrusterWebBus = require("./lib/web-bus/FrusterWebBus");
 
-require("fruster-health").start();
+require("fruster-health").start(bus);
 
 apiGateway.start(conf.bus, conf.mongoUrl, conf.port)
 	.then(server => new FrusterWebBus(server))
