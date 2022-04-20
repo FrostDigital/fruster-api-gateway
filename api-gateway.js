@@ -289,7 +289,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 	return bus.request(subject, message, ms(conf.busTimeout), true).then(optionsRes => {
 		const { url } = optionsRes.data.http;
 
-		let requestOptions = { uri: url };
+		let requestOptions = { uri: url, qs: httpReq.query };
 
 		httpReq.headers.data = utils.convertJsonToHttpHeaderString(message);
 

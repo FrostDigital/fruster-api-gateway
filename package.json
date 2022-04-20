@@ -33,7 +33,7 @@
 		"fruster-test-utils": "^0.5.0",
 		"jasmine": "^3.5.0",
 		"jasmine-spec-reporter": "^4.2.1",
-		"multiparty": "^4.2.1",
+		"multiparty": "^4.2.3",
 		"request": "^2.88.1"
 	}
 }

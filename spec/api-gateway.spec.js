@@ -359,6 +359,8 @@ describe("API Gateway", () => {
 		app.post("/foobar", (req, res) => {
 			let form = new multiparty.Form();
 
+			expect(req.query.bar).toBe("1");
+
 			form.parse(req, function (err, fields, files) {
 				expect(files.file[0].fieldName).toBe("file");
 				expect(files.file[0].originalFilename).toBe("a-large-file.jpg");
@@ -373,7 +375,8 @@ describe("API Gateway", () => {
 			});
 		});
 
-		doMultipartRequest("/foo", (error, response, respBody) => {
+		doMultipartRequest("/foo?bar=1", (error, response, respBody) => {
+
 			let body = JSON.parse(respBody);
 
 			expect(body.status).toBe(200);
