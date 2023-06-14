@@ -395,7 +395,7 @@ module.exports = {
 		}
 
 		const startHttpServer = new Promise((resolve, reject) => {
-			const server = http.createServer(createExpressApp()).listen(httpServerPort);
+			const server = http.createServer({ maxHeaderSize: conf.maxHeaderSize }, createExpressApp()).listen(httpServerPort);
 
 			server.on("error", reject);
 
