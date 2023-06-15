@@ -112,6 +112,11 @@ module.exports = {
 	maxRequestSize: process.env.MAX_REQUEST_SIZE || "100mb",
 
 	/**
+	 * Max header size. Default is 16kb.
+	 */
+	maxHeaderSize: parseInt(process.env.MAX_HEADER_SIZE || "16384"),
+
+	/**
 	 * Time in milliseconds until API Gateway responds with timeout failure response.
 	 */
 	httpTimeout: process.env.HTTP_TIMEOUT || "2s",
