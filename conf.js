@@ -114,7 +114,7 @@ module.exports = {
 	/**
 	 * Max header size. Default is 16kb.
 	 */
-	maxHeaderSize: parseInt(process.env.maxHeaderSize || "16384"),
+	maxHeaderSize: parseInt(process.env.MAX_HEADER_SIZE || "16384"),
 
 	/**
 	 * Time in milliseconds until API Gateway responds with timeout failure response.
