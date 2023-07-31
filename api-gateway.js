@@ -130,6 +130,7 @@ function createExpressApp() {
 				rewrite: to,
 			});
 		});
+		log.debug(`Parsed rewrite rules:\n${JSON.stringify(parsedRewriteRules, null, 2)}`);
 	}
 
 	return app;

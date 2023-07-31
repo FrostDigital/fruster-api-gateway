@@ -207,7 +207,7 @@ module.exports = {
 	 * {userId1|userId2|...}:{regexp of subject pattern to match}>{rewritten subject with $1, $2 etc.}
 	 *
 	 * Example:
-	 * 69dc16d8-86b7-4e05-88ba-c9284607bedf:http\.(get|post|put|delete)\.car\.?(.*)>http.v2.$1.car$2
+	 * 69dc16d8-86b7-4e05-88ba-c9284607bedf:http\.(get|post|put|delete)\.car(.*)>http.v2.$1.car$2
 	 *
 	 * In above example api gateway will rewrite the following for user 69dc16d8-86b7-4e05-88ba-c9284607bedf:
 	 *

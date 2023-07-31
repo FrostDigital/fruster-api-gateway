@@ -15,7 +15,7 @@ describe("Rewrite", () => {
 
 	testUtils.startBeforeEach({
 		service: (connection) => {
-			conf.rewriteRules = `${userId}:http\.(get|post|put|delete)\.foo(\.?.*)>http.v2.$1.foo$2`;
+			conf.rewriteRules = `${userId}:http\.(get|post|put|delete)\.foo(.*)>http.v2.$1.foo$2`;
 
 			httpPort = Math.floor(Math.random() * 6000 + 2000);
 			baseUri = "http://127.0.0.1:" + httpPort;
