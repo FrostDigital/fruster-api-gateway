@@ -37,8 +37,10 @@ let influxRepo;
 
 const interceptAction = {
 	respond: "respond",
-	next: "next"
+	next: "next",
 };
+
+const parsedRewriteRules = [];
 
 /**
  * Creates an Express app and adds middlewares and handlers
@@ -55,24 +57,24 @@ function createExpressApp() {
 		cors({
 			origin: conf.allowOrigin,
 			credentials: true,
-			allowedHeaders: conf.allowedHeaders
+			allowedHeaders: conf.allowedHeaders,
 		})
 	);
 	app.use(timeout(conf.httpTimeout));
 	app.use(
 		bodyParser.json({
-			type: req => {
+			type: (req) => {
 				const contentType = req.headers["content-type"] || "";
 				return contentType.includes("json");
 			},
-			limit: conf.maxRequestSize
+			limit: conf.maxRequestSize,
 		})
 	);
 	app.use(
 		bodyParser.text({
 			type: constants.TEXT_CONTENT_TYPES,
 			defaultCharset: "utf-8",
-			limit: conf.maxRequestSize
+			limit: conf.maxRequestSize,
 		})
 	);
 	app.use(bodyParser.urlencoded({ extended: false }));
@@ -85,7 +87,7 @@ function createExpressApp() {
 	});
 
 	app.get("/robots.txt", function (req, res) {
-		res.type('text/plain');
+		res.type("text/plain");
 		res.send("User-agent: *\nDisallow: /");
 	});
 
@@ -106,14 +108,29 @@ function createExpressApp() {
 
 		let json = { message: err.message };
 
-		if (conf.printStacktrace)
-			json.stacktrace = err.stack;
+		if (conf.printStacktrace) json.stacktrace = err.stack;
 
 		res.json(json);
 
-		if (res.status === 500)
-			log.error(err.stack);
+		if (res.status === 500) log.error(err.stack);
 	});
+
+	if (conf.rewriteRules) {
+		log.info("Rewrite rules enabled");
+		// {userId1|userId2|...}:{subject pattern to match}>{subject to rewrite to}
+		const rules = conf.rewriteRules.split(",");
+
+		rules.forEach((rule) => {
+			const [userId, rewrite] = rule.split(":");
+			const [from, to] = rewrite.split(">");
+
+			parsedRewriteRules.push({
+				userId: userId.split("|"),
+				match: new RegExp(from),
+				rewrite: to,
+			});
+		});
+	}
 
 	return app;
 }
@@ -152,8 +169,7 @@ function handleBusErrorResponse(err, httpRes, reqId) {
 		httpRes.status(err.status || 500);
 	}
 
-	if (httpRes.statusCode > 499)
-		log.error(err);
+	if (httpRes.statusCode > 499) log.error(err);
 
 	setRequestId(reqId, err);
 
@@ -161,7 +177,7 @@ function handleBusErrorResponse(err, httpRes, reqId) {
 }
 
 function invokeRequestInterceptors(subject, message) {
-	const matchedInterceptors = conf.interceptors.filter(interceptor => {
+	const matchedInterceptors = conf.interceptors.filter((interceptor) => {
 		return interceptor.type === "request" && interceptor.match(subject);
 	});
 
@@ -174,7 +190,7 @@ function invokeRequestInterceptors(subject, message) {
 			return bus.request({
 				subject: interceptor.targetSubject,
 				message: _message,
-				skipOptionsRequest: true
+				skipOptionsRequest: true,
 			});
 		},
 		message
@@ -182,7 +198,7 @@ function invokeRequestInterceptors(subject, message) {
 }
 
 function invokeResponseInterceptors(subject, message, messageIsException) {
-	const matchedInterceptors = conf.interceptors.filter(interceptor => {
+	const matchedInterceptors = conf.interceptors.filter((interceptor) => {
 		const typeIsResponse = interceptor.type === "response";
 		const subjectMatchesSubject = interceptor.match(subject);
 		const isNotExceptionOrConfiguredToAllowExceptions = !messageIsException
@@ -198,13 +214,12 @@ function invokeResponseInterceptors(subject, message, messageIsException) {
 	return BPromise.reduce(
 		matchedInterceptors,
 		(_message, interceptor) => {
-			if (_message.interceptAction === interceptAction.respond)
-				return _message;
+			if (_message.interceptAction === interceptAction.respond) return _message;
 
 			return bus.request({
 				subject: interceptor.targetSubject,
 				message: _message,
-				skipOptionsRequest: true
+				skipOptionsRequest: true,
 			});
 		},
 		message
@@ -217,13 +232,31 @@ function sendInternalRequest(httpReq) {
 	const subject = utils.createSubject(httpReq);
 	const message = utils.createRequest(httpReq, reqId, user);
 
-	return invokeRequestInterceptors(subject, message).then(interceptedReq => {
+	return invokeRequestInterceptors(subject, message).then((interceptedReq) => {
 		if (interceptedReq.interceptAction === interceptAction.respond) {
 			delete interceptedReq.interceptAction;
 			return interceptedReq;
 		}
 
-		log.silly("Sending to subject", subject);
+		let rewrittenSubject = subject;
+
+		if (parsedRewriteRules.length > 0) {
+			const userId = user ? user.id : null;
+
+			if (userId) {
+				const rule = parsedRewriteRules.find((rule) => rule.userId.includes(userId));
+
+				if (rule && rule.match.test(subject)) {
+					rewrittenSubject = rule.rewrite;
+				}
+			}
+		}
+
+		if (subject !== rewrittenSubject) {
+			log.info(`Rewrote subject ${subject} to ${rewrittenSubject} for user ${user.id}`);
+		} else {
+			log.silly("Sending to subject", rewrittenSubject);
+		}
 
 		// Multipart requests are dealt with manually so that
 		// api gateway is able to stream the multipart body to
@@ -236,14 +269,14 @@ function sendInternalRequest(httpReq) {
 		// the api gateway.
 
 		if (isMultipart(httpReq)) {
-			return sendInternalMultipartRequest(subject, interceptedReq, httpReq)
+			return sendInternalMultipartRequest(rewrittenSubject, interceptedReq, httpReq)
 				.then(interceptResponse)
-				.catch(err => interceptResponse(err, true));
+				.catch((err) => interceptResponse(err, true));
 		} else {
 			return bus
-				.request(subject, interceptedReq, ms(conf.busTimeout))
+				.request(rewrittenSubject, interceptedReq, ms(conf.busTimeout))
 				.then(interceptResponse)
-				.catch(err => interceptResponse(err, true));
+				.catch((err) => interceptResponse(err, true));
 		}
 
 		function interceptResponse(response, messageIsException) {
@@ -254,8 +287,8 @@ function sendInternalRequest(httpReq) {
 				prepareInterceptResponseMessage(response, message),
 				messageIsException
 			)
-				.then(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse))
-				.catch(interceptedResponse => cleanInterceptedResponse(response, interceptedResponse));
+				.then((interceptedResponse) => cleanInterceptedResponse(response, interceptedResponse))
+				.catch((interceptedResponse) => cleanInterceptedResponse(response, interceptedResponse));
 		}
 	});
 }
@@ -286,7 +319,7 @@ function cleanInterceptedResponse(response, interceptedResponse) {
 }
 
 function sendInternalMultipartRequest(subject, message, httpReq) {
-	return bus.request(subject, message, ms(conf.busTimeout), true).then(optionsRes => {
+	return bus.request(subject, message, ms(conf.busTimeout), true).then((optionsRes) => {
 		const { url } = optionsRes.data.http;
 
 		let requestOptions = { uri: url, qs: httpReq.query };
@@ -326,9 +359,7 @@ function sendInternalMultipartRequest(subject, message, httpReq) {
 function sendHttpResponse(reqId, busResponse, httpResponse) {
 	setRequestId(reqId, busResponse);
 
-	httpResponse
-		.status(busResponse.status)
-		.set(busResponse.headers);
+	httpResponse.status(busResponse.status).set(busResponse.headers);
 
 	if (isTextResponse(busResponse)) {
 		httpResponse.send(busResponse.data);
@@ -375,7 +406,7 @@ function isBinaryResponse(busResponse) {
 }
 
 function getContentType(busResponse) {
-	return busResponse.headers && (busResponse.headers["content-type"] || busResponse.headers["Content-Type"]) || "";
+	return (busResponse.headers && (busResponse.headers["content-type"] || busResponse.headers["Content-Type"])) || "";
 }
 
 module.exports = {
@@ -385,8 +416,7 @@ module.exports = {
 			const db = await mongo.connect(mongoUrl);
 			responseTimeRepo = new ResponseTimeRepo(db);
 
-			if (!process.env.CI)
-				await createIndexes(db);
+			if (!process.env.CI) await createIndexes(db);
 		}
 
 		if (conf.influxDbUrl) {
@@ -395,7 +425,9 @@ module.exports = {
 		}
 
 		const startHttpServer = new Promise((resolve, reject) => {
-			const server = http.createServer({ maxHeaderSize: conf.maxHeaderSize }, createExpressApp()).listen(httpServerPort);
+			const server = http
+				.createServer({ maxHeaderSize: conf.maxHeaderSize }, createExpressApp())
+				.listen(httpServerPort);
 
 			server.on("error", reject);
 
@@ -411,16 +443,15 @@ module.exports = {
 			return bus.connect(busAddress);
 		};
 
-		return startHttpServer.then(server => connectToBus().then(() => server));
-	}
+		return startHttpServer.then((server) => connectToBus().then(() => server));
+	},
 };
 
 async function createIndexes(db) {
 	try {
-		await db.collection(constants.collections.RESPONSE_TIME).createIndex(
-			{ createdAt: 1 },
-			{ expireAfterSeconds: conf.statsTTL }
-		);
+		await db
+			.collection(constants.collections.RESPONSE_TIME)
+			.createIndex({ createdAt: 1 }, { expireAfterSeconds: conf.statsTTL });
 	} catch (err) {
 		log.warn(err);
 	}
@@ -437,7 +468,7 @@ async function createInfluxRepo() {
 			url: conf.influxDbUrl,
 			writeInterval: conf.influxWriteInterval,
 			ipLookup: conf.influxLookupIp,
-			ipLookupDbUrl: conf.ipLookUpDbUrl
+			ipLookupDbUrl: conf.ipLookUpDbUrl,
 		}).init();
 	} catch (err) {
 		log.warn(
