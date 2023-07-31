@@ -1,6 +1,5 @@
 const request = require("request");
 const bus = require("fruster-bus");
-const express = require("express");
 const testUtils = require("fruster-test-utils");
 const conf = require("../conf");
 const apiGw = require("../api-gateway");
@@ -16,7 +15,7 @@ describe("Rewrite", () => {
 
 	testUtils.startBeforeEach({
 		service: (connection) => {
-			conf.rewriteRules = `${userId}:http.get.foo.*>http.get.foo-v2.*`;
+			conf.rewriteRules = `${userId}:http\.(get|post|put|delete)\.foo(\.?.*)>http.v2.$1.foo$2`;
 
 			httpPort = Math.floor(Math.random() * 6000 + 2000);
 			baseUri = "http://127.0.0.1:" + httpPort;
@@ -58,7 +57,7 @@ describe("Rewrite", () => {
 			};
 		});
 
-		bus.subscribe("http.get.foo-v2.:id", (req) => {
+		bus.subscribe("http.v2.get.foo.:id", (req) => {
 			return {
 				status: 200,
 				data: "rewritten",

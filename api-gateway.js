@@ -247,7 +247,15 @@ function sendInternalRequest(httpReq) {
 				const rule = parsedRewriteRules.find((rule) => rule.userId.includes(userId));
 
 				if (rule && rule.match.test(subject)) {
-					rewrittenSubject = rule.rewrite;
+					if (rule.rewrite.includes("$1")) {
+						const [_, ...groups] = rule.match.exec(subject);
+
+						rewrittenSubject = rule.rewrite.replace(/\$(\d+)/g, (match, number) => {
+							return groups[number - 1] || "";
+						});
+					} else {
+						rewrittenSubject = rule.rewrite;
+					}
 				}
 			}
 		}

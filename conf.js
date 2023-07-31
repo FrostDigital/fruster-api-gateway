@@ -193,20 +193,27 @@ module.exports = {
 	httpSubjectToLowerCase: parseBool(process.env.HTTP_SUBJECT_TO_LOWERCASE, true),
 
 	/**
-	 * Rewrite rules for http subjects. Can for example be used in debugging purposes
+	 * Rewrite rules for http subjects.
+	 *
+	 * Can for example be used in debugging purposes
 	 * when you want to rewrite a subject to another subject depending on user. This way
 	 * multiple versions of a service can be run in parallel.
+	 *
+	 * Rewrite rules are defined using regexp with optional match groups.
 	 *
 	 * Add multiple rules by separating them with comma.
 	 *
 	 * Format:
-	 * {userId1|userId2|...}:{subject pattern to match}>{subject to rewrite to}
+	 * {userId1|userId2|...}:{regexp of subject pattern to match}>{rewritten subject with $1, $2 etc.}
 	 *
 	 * Example:
-	 * 69dc16d8-86b7-4e05-88ba-c9284607bedf:http.get.car>http.get.car-v2
+	 * 69dc16d8-86b7-4e05-88ba-c9284607bedf:http\.(get|post|put|delete)\.car\.?(.*)>http.v2.$1.car$2
 	 *
-	 * In above example api gateway will rewrite all http.get.car subjects to http.get.car-v2
-	 * for logged in user with id 69dc16d8-86b7-4e05-88ba-c9284607bedf.
+	 * In above example api gateway will rewrite the following for user 69dc16d8-86b7-4e05-88ba-c9284607bedf:
+	 *
+	 * http.get.car -> http.v2.get.car
+	 * http.post.car.toyota -> http.v2.post.car.toyota
+	 * etc...
 	 */
 	rewriteRules: process.env.REWRITE_RULES || "",
 };
