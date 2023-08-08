@@ -253,17 +253,20 @@ function sendInternalRequest(httpReq) {
 			const userId = user ? user.id : null;
 
 			if (userId) {
-				const rule = parsedRewriteRules.find((rule) => rule.userId.includes(userId));
+				const rules = parsedRewriteRules.filter((rule) => rule.userId.includes(userId));
 
-				if (rule && rule.match.test(subject)) {
-					if (rule.rewrite.includes("$1")) {
-						const [_, ...groups] = rule.match.exec(subject);
+				for (const rule of rules) {
+					if (rule.match.test(subject)) {
+						if (rule.rewrite.includes("$1")) {
+							const [_, ...groups] = rule.match.exec(subject);
 
-						rewrittenSubject = rule.rewrite.replace(/\$(\d+)/g, (match, number) => {
-							return groups[number - 1] || "";
-						});
-					} else {
-						rewrittenSubject = rule.rewrite;
+							rewrittenSubject = rule.rewrite.replace(/\$(\d+)/g, (_match, number) => {
+								return groups[number - 1] || "";
+							});
+						} else {
+							rewrittenSubject = rule.rewrite;
+						}
+						continue;
 					}
 				}
 			}
