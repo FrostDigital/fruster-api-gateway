@@ -94,14 +94,15 @@ module.exports = {
 	 *
 	 * Only used if INFLUXDB_URL and INFLUX_LOOKUP_IP is set.
 	 */
-	ipLookUpDbUrl: process.env.IP_LOOKUP_DB_URL || "https://fruster-ip-lookup-db.s3-eu-west-1.amazonaws.com/GeoLite2-City.mmdb",
+	ipLookUpDbUrl:
+		process.env.IP_LOOKUP_DB_URL || "https://fruster-ip-lookup-db.s3-eu-west-1.amazonaws.com/GeoLite2-City.mmdb",
 
 	/**
 	 * For how long time HTTP response time stats should be saved.
 	 *
 	 * Default: 4w
 	 */
-	statsTTL: parseInt((ms(process.env.STATS_TTL || "4w") / 1000) + ""),
+	statsTTL: parseInt(ms(process.env.STATS_TTL || "4w") / 1000 + ""),
 
 	/**
 	 * Max size of requests that we can handle.
@@ -190,6 +191,31 @@ module.exports = {
 	 * Default: true
 	 */
 	httpSubjectToLowerCase: parseBool(process.env.HTTP_SUBJECT_TO_LOWERCASE, true),
+
+	/**
+	 * Rewrite rules for http subjects.
+	 *
+	 * Can for example be used in debugging purposes
+	 * when you want to rewrite a subject to another subject depending on user. This way
+	 * multiple versions of a service can be run in parallel.
+	 *
+	 * Rewrite rules are defined using regexp with optional match groups.
+	 *
+	 * Add multiple rules by separating them with comma.
+	 *
+	 * Format:
+	 * {userId1|userId2|...}:{regexp of subject pattern to match}>{rewritten subject with $1, $2 etc.}
+	 *
+	 * Example:
+	 * 69dc16d8-86b7-4e05-88ba-c9284607bedf:http\.(get|post|put|delete)\.car(.*)>http.v2.$1.car$2
+	 *
+	 * In above example api gateway will rewrite the following for user 69dc16d8-86b7-4e05-88ba-c9284607bedf:
+	 *
+	 * http.get.car -> http.v2.get.car
+	 * http.post.car.toyota -> http.v2.post.car.toyota
+	 * etc...
+	 */
+	rewriteRules: process.env.REWRITE_RULES || "",
 };
 
 function parseBool(str, defaultVal) {

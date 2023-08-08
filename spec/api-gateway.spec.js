@@ -16,23 +16,23 @@ describe("API Gateway", () => {
 	const mongoUrl = `mongodb://localhost:27017/fruster-api-gateway-test`;
 
 	testUtils.startBeforeEach({
-		service: connection => {
+		service: (connection) => {
 			httpPort = Math.floor(Math.random() * 6000 + 2000);
 			baseUri = "http://127.0.0.1:" + httpPort;
 
-			return apiGw.start(connection.natsUrl, mongoUrl, httpPort).then(_server => {
+			return apiGw.start(connection.natsUrl, mongoUrl, httpPort).then((_server) => {
 				server = _server;
 			});
 		},
 		mockNats: true,
-		afterStart: connection => {
+		afterStart: (connection) => {
 			new FrusterWebBus(server, {
-				test: true
+				test: true,
 			});
-		}
+		},
 	});
 
-	it("should returns status code 404 if gateway does not recieve a response", async done => {
+	it("should returns status code 404 if gateway does not recieve a response", async (done) => {
 		const response = await get("/foo");
 
 		expect(response.statusCode).toBe(404);
@@ -41,8 +41,8 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET", async done => {
-		bus.subscribe("http.get.foo", req => {
+	it("should create and recieve bus message for HTTP GET", async (done) => {
+		bus.subscribe("http.get.foo", (req) => {
 			expect(req.path).toBe("/foo");
 			expect(req.method).toBe("GET");
 			expect(req.reqId).toBeDefined();
@@ -51,11 +51,11 @@ describe("API Gateway", () => {
 			return {
 				status: 201,
 				headers: {
-					"A-Header": "foo"
+					"A-Header": "foo",
 				},
 				data: {
-					foo: "bar"
-				}
+					foo: "bar",
+				},
 			};
 		});
 
@@ -72,8 +72,8 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET that includes dot in path", async done => {
-		bus.subscribe("http.get.foo.:paramWithDot.foo", req => {
+	it("should create and recieve bus message for HTTP GET that includes dot in path", async (done) => {
+		bus.subscribe("http.get.foo.:paramWithDot.foo", (req) => {
 			expect(req.path).toBe("/foo/foo.bar/foo");
 			expect(req.method).toBe("GET");
 			expect(req.reqId).toBeDefined();
@@ -82,11 +82,11 @@ describe("API Gateway", () => {
 			return {
 				status: 200,
 				headers: {
-					"A-Header": "foo"
+					"A-Header": "foo",
 				},
 				data: {
-					foo: "bar"
-				}
+					foo: "bar",
+				},
 			};
 		});
 
@@ -98,15 +98,15 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should get no cache headers on HTTP response when NO_CACHE is true", async done => {
+	it("should get no cache headers on HTTP response when NO_CACHE is true", async (done) => {
 		conf.noCache = true;
 
-		bus.subscribe("http.get.foo", req => {
+		bus.subscribe("http.get.foo", (req) => {
 			return {
 				status: 201,
 				data: {
-					foo: "bar"
-				}
+					foo: "bar",
+				},
 			};
 		});
 
@@ -122,15 +122,15 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET in unwrapped mode", async done => {
+	it("should create and recieve bus message for HTTP GET in unwrapped mode", async (done) => {
 		conf.unwrapMessageData = true;
 
-		bus.subscribe("http.get.foo", req => {
+		bus.subscribe("http.get.foo", (req) => {
 			return {
 				status: 200,
 				data: {
-					foo: "bar"
-				}
+					foo: "bar",
+				},
 			};
 		});
 
@@ -143,13 +143,13 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should return error status code from bus", async done => {
-		bus.subscribe("http.post.bar", req => {
+	it("should return error status code from bus", async (done) => {
+		bus.subscribe("http.post.bar", (req) => {
 			return {
 				status: 420,
 				headers: {
-					"x-foo": "bar"
-				}
+					"x-foo": "bar",
+				},
 			};
 		});
 
@@ -162,15 +162,15 @@ describe("API Gateway", () => {
 	});
 
 	describe("Tokens", () => {
-		it("should return 403 if validation of JWT cookie failed", async done => {
-			bus.subscribe("auth-service.decode-token", req => {
+		it("should return 403 if validation of JWT cookie failed", async (done) => {
+			bus.subscribe("auth-service.decode-token", (req) => {
 				expect(req.headers).toBeDefined("should send headers to auth service");
 
 				return {
 					status: 403,
 					error: {
-						code: "auth-service.403.1"
-					}
+						code: "auth-service.403.1",
+					},
 				};
 			});
 
@@ -182,16 +182,16 @@ describe("API Gateway", () => {
 			done();
 		});
 
-		it("should return 403 if validation of JWT in auth header failed", async done => {
-			bus.subscribe("auth-service.decode-token", req => {
+		it("should return 403 if validation of JWT in auth header failed", async (done) => {
+			bus.subscribe("auth-service.decode-token", (req) => {
 				expect(req.data).toBe("a-token");
 				expect(req.headers).toBeDefined("should send headers to auth service");
 
 				return {
 					status: 403,
 					error: {
-						code: "auth-service.403.1"
-					}
+						code: "auth-service.403.1",
+					},
 				};
 			});
 
@@ -203,24 +203,24 @@ describe("API Gateway", () => {
 			done();
 		});
 
-		it("should set user data with decoded jwt cookie", async done => {
-			bus.subscribe("auth-service.decode-token", req => {
+		it("should set user data with decoded jwt cookie", async (done) => {
+			bus.subscribe("auth-service.decode-token", (req) => {
 				expect(req.data).toBe("acookie");
 				expect(req.headers).toBeDefined("should send headers to auth service");
 
 				return {
 					status: 200,
-					data: "decoded-cookie"
+					data: "decoded-cookie",
 				};
 			});
 
-			bus.subscribe("http.get.foo", req => {
+			bus.subscribe("http.get.foo", (req) => {
 				expect(req.user).toBe("decoded-cookie");
 				return {
 					status: 200,
 					data: {
-						foo: "bar"
-					}
+						foo: "bar",
+					},
 				};
 			});
 
@@ -232,25 +232,24 @@ describe("API Gateway", () => {
 			done();
 		});
 
-		it("should not decode token if route is public", async done => {
-
-			bus.subscribe("auth-service.decode-token", req => {
+		it("should not decode token if route is public", async (done) => {
+			bus.subscribe("auth-service.decode-token", (req) => {
 				done.fail("Auth service should not have been invoked");
 				expect(req.headers).toBeDefined("should send headers to auth service");
 
 				return {
 					status: 200,
-					data: "decoded-cookie"
+					data: "decoded-cookie",
 				};
 			});
 
-			bus.subscribe("http.get.auth.cookie", req => {
+			bus.subscribe("http.get.auth.cookie", (req) => {
 				expect(req.user).toEqual({});
 				return {
 					status: 200,
 					data: {
-						foo: "bar"
-					}
+						foo: "bar",
+					},
 				};
 			});
 
@@ -262,13 +261,13 @@ describe("API Gateway", () => {
 			done();
 		});
 
-		it("should not try to decode token if none is present", async done => {
-			bus.subscribe("http.get.foo", req => {
+		it("should not try to decode token if none is present", async (done) => {
+			bus.subscribe("http.get.foo", (req) => {
 				return {
 					status: 200,
 					data: {
-						foo: "bar"
-					}
+						foo: "bar",
+					},
 				};
 			});
 
@@ -280,24 +279,24 @@ describe("API Gateway", () => {
 			done();
 		});
 
-		it("should set user data with decoded jwt cookie", async done => {
-			bus.subscribe("auth-service.decode-token", req => {
+		it("should set user data with decoded jwt cookie", async (done) => {
+			bus.subscribe("auth-service.decode-token", (req) => {
 				expect(req.data).toBe("acookie");
 				expect(req.headers).toBeDefined("should send headers to auth service");
 
 				return {
 					status: 200,
-					data: "decoded-cookie"
+					data: "decoded-cookie",
 				};
 			});
 
-			bus.subscribe("http.get.foo", req => {
+			bus.subscribe("http.get.foo", (req) => {
 				expect(req.user).toBe("decoded-cookie");
 				return {
 					status: 200,
 					data: {
-						foo: "bar"
-					}
+						foo: "bar",
+					},
 				};
 			});
 
@@ -310,10 +309,10 @@ describe("API Gateway", () => {
 		});
 	});
 
-	it("should set reqId in HTTP response even though none is returned from bus", async done => {
-		bus.subscribe("http.get.foo", req => {
+	it("should set reqId in HTTP response even though none is returned from bus", async (done) => {
+		bus.subscribe("http.get.foo", (req) => {
 			return {
-				status: 200
+				status: 200,
 			};
 		});
 
@@ -325,22 +324,23 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should be possible to send content type containing json", async done => {
-		bus.subscribe("http.post.content-type-json", req => {
+	it("should be possible to send content type containing json", async (done) => {
+		bus.subscribe("http.post.content-type-json", (req) => {
 			expect(req.data.hello).toBe(1337);
 			return {
-				status: 200
+				status: 200,
 			};
 		});
 
 		const res = await post(
 			"/content-type-json",
 			{
-				"content-type": "application/vnd.contentful.management.v1+json"
+				"content-type": "application/vnd.contentful.management.v1+json",
 			},
 			{
-				hello: 1337
-			});
+				hello: 1337,
+			}
+		);
 
 		expect(res.statusCode).toBe(200);
 		expect(res.body.reqId).toBeDefined();
@@ -348,7 +348,7 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should forward POST request with multipart via http to url specified by bus.subscribe", done => {
+	it("should forward POST request with multipart via http to url specified by bus.subscribe", (done) => {
 		let expressPort = Math.floor(Math.random() * 6000 + 3000);
 		let app = express();
 		let server = http.createServer(app);
@@ -370,13 +370,12 @@ describe("API Gateway", () => {
 
 				res.send({
 					reqId: JSON.parse(req.headers.data).reqId,
-					status: 200
+					status: 200,
 				});
 			});
 		});
 
 		doMultipartRequest("/foo?bar=1", (error, response, respBody) => {
-
 			let body = JSON.parse(respBody);
 
 			expect(body.status).toBe(200);
@@ -388,7 +387,7 @@ describe("API Gateway", () => {
 		});
 	});
 
-	it("should send additional data in headers when forwarding POST request with multipart/form-data via http to url specified by bus.subscribe", done => {
+	it("should send additional data in headers when forwarding POST request with multipart/form-data via http to url specified by bus.subscribe", (done) => {
 		let expressPort = Math.floor(Math.random() * 6000 + 3000);
 		let app = express();
 		let server = http.createServer(app);
@@ -408,7 +407,7 @@ describe("API Gateway", () => {
 
 			res.send({
 				reqId: additionaldata.reqId,
-				status: 200
+				status: 200,
 			});
 		});
 
@@ -423,7 +422,7 @@ describe("API Gateway", () => {
 		});
 	});
 
-	it("should get error when multipart upload failed", done => {
+	it("should get error when multipart upload failed", (done) => {
 		let expressPort = Math.floor(Math.random() * 6000 + 3000);
 		let app = express();
 		let server = http.createServer(app);
@@ -437,8 +436,8 @@ describe("API Gateway", () => {
 				status: 500,
 				error: {
 					id: "8e97186c-4165-4d75-8293-92adead403db",
-					title: "Upload totally failed"
-				}
+					title: "Upload totally failed",
+				},
 			});
 		});
 
@@ -457,16 +456,15 @@ describe("API Gateway", () => {
 	});
 
 	describe("handling non JSON content types", () => {
-
 		it("should POST XML body when content-type is text/xml", async (done) => {
-			const xmlSnippet = "<Foo bar=\"1\" />";
+			const xmlSnippet = '<Foo bar="1" />';
 
-			bus.subscribe("http.post.xml", req => {
+			bus.subscribe("http.post.xml", (req) => {
 				expect(req.headers["content-type"]).toBe("text/xml");
 				expect(req.data).toBe(xmlSnippet);
 
 				return {
-					status: 200
+					status: 200,
 				};
 			});
 
@@ -479,14 +477,14 @@ describe("API Gateway", () => {
 		});
 
 		it("should POST XML body when content-type is application/xml", async (done) => {
-			const xmlSnippet = "<Foo bar=\"1\" />";
+			const xmlSnippet = '<Foo bar="1" />';
 
-			bus.subscribe("http.post.xml", req => {
+			bus.subscribe("http.post.xml", (req) => {
 				expect(req.headers["content-type"]).toBe("application/xml");
 				expect(req.data).toBe(xmlSnippet);
 
 				return {
-					status: 200
+					status: 200,
 				};
 			});
 
@@ -499,15 +497,15 @@ describe("API Gateway", () => {
 		});
 
 		it("should respond with XML", async (done) => {
-			const xmlSnippet = "<Foo bar=\"1\" />";
+			const xmlSnippet = '<Foo bar="1" />';
 
-			bus.subscribe("http.get.xml", req => {
+			bus.subscribe("http.get.xml", (req) => {
 				return {
 					status: 200,
 					headers: {
-						"Content-Type": "text/xml"
+						"Content-Type": "text/xml",
 					},
-					data: xmlSnippet
+					data: xmlSnippet,
 				};
 			});
 
@@ -523,13 +521,13 @@ describe("API Gateway", () => {
 		it("should respond with XLSX file", async (done) => {
 			const base64EncodedFile = xlsxFileBuffer.toString("base64");
 
-			bus.subscribe("http.get.xlsx", req => {
+			bus.subscribe("http.get.xlsx", (req) => {
 				return {
 					status: 200,
 					headers: {
-						"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+						"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 					},
-					data: base64EncodedFile
+					data: base64EncodedFile,
 				};
 			});
 
@@ -538,7 +536,9 @@ describe("API Gateway", () => {
 			expect(response.statusCode).toBe(200);
 			expect(response.headers["x-fruster-req-id"]).toBeDefined();
 			expect(response.body.length).toBe(xlsxFileBuffer.length);
-			expect(response.headers["content-type"]).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=binary")
+			expect(response.headers["content-type"]).toBe(
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=binary"
+			);
 
 			fs.writeFileSync("./spec/test-output.xlsx", response.body);
 
@@ -561,12 +561,11 @@ describe("API Gateway", () => {
 
 	function doRequest({ method, path, headers = {}, json = null, rawBody = null, reqOpts = {} }) {
 		return new Promise((resolve, reject) => {
-
 			reqOpts = {
 				...reqOpts,
 				uri: baseUri + path,
 				method: method,
-				headers: headers
+				headers: headers,
 			};
 
 			if (rawBody) {
@@ -575,17 +574,14 @@ describe("API Gateway", () => {
 				reqOpts.json = json || true;
 			}
 
-			request(reqOpts,
-				(err, response, body) => {
-					if (err) {
-						return reject(err);
-					}
-					response.body = body;
-					resolve(response);
+			request(reqOpts, (err, response, body) => {
+				if (err) {
+					return reject(err);
 				}
-			);
-
-		})
+				response.body = body;
+				resolve(response);
+			});
+		});
 	}
 
 	function doFormDataRequest(path, cb) {
@@ -596,11 +592,11 @@ describe("API Gateway", () => {
 				formData: {
 					a: "a",
 					b: "b",
-					c: "c"
+					c: "c",
 				},
 				headers: {
-					"content-type": "multipart/form-data"
-				}
+					"content-type": "multipart/form-data",
+				},
 			},
 			cb
 		);
@@ -612,11 +608,11 @@ describe("API Gateway", () => {
 				method: "post",
 				uri: baseUri + path,
 				formData: {
-					file: fs.createReadStream("./spec/a-large-file.jpg")
+					file: fs.createReadStream("./spec/a-large-file.jpg"),
 				},
 				headers: {
-					"content-type": "multipart/form-data"
-				}
+					"content-type": "multipart/form-data",
+				},
 			},
 			cb
 		);
