@@ -130,7 +130,15 @@ function createExpressApp() {
 				rewrite: to,
 			});
 		});
-		log.debug(`Parsed rewrite rules:\n${JSON.stringify(parsedRewriteRules, null, 2)}`);
+
+		for (const rule of parsedRewriteRules) {
+			let i = 1;
+			log.debug(`Parsed rewrite rule (${i}/${parsedRewriteRules.length}):`);
+			log.debug(`User IDs: ${rule.userId.join(", ")}`);
+			log.debug(`Match: ${rule.match.toString()}`);
+			log.debug(`Rewrite: ${rule.rewrite}`);
+			i++;
+		}
 	}
 
 	return app;
