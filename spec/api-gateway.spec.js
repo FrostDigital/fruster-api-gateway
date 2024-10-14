@@ -17,6 +17,7 @@ describe("API Gateway", () => {
 
 	testUtils.startBeforeEach({
 		service: (connection) => {
+			conf.enableStats = true;
 			httpPort = Math.floor(Math.random() * 6000 + 2000);
 			baseUri = "http://127.0.0.1:" + httpPort;
 
@@ -32,7 +33,7 @@ describe("API Gateway", () => {
 		},
 	});
 
-	it("should returns status code 404 if gateway does not recieve a response", async (done) => {
+	it("should returns status code 404 if gateway does not receive a response", async (done) => {
 		const response = await get("/foo");
 
 		expect(response.statusCode).toBe(404);
@@ -41,7 +42,7 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET", async (done) => {
+	it("should create and receive bus message for HTTP GET", async (done) => {
 		bus.subscribe("http.get.foo", (req) => {
 			expect(req.path).toBe("/foo");
 			expect(req.method).toBe("GET");
@@ -72,7 +73,7 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET that includes dot in path", async (done) => {
+	it("should create and receive bus message for HTTP GET that includes dot in path", async (done) => {
 		bus.subscribe("http.get.foo.:paramWithDot.foo", (req) => {
 			expect(req.path).toBe("/foo/foo.bar/foo");
 			expect(req.method).toBe("GET");
@@ -122,7 +123,7 @@ describe("API Gateway", () => {
 		done();
 	});
 
-	it("should create and recieve bus message for HTTP GET in unwrapped mode", async (done) => {
+	it("should create and receive bus message for HTTP GET in unwrapped mode", async (done) => {
 		conf.unwrapMessageData = true;
 
 		bus.subscribe("http.get.foo", (req) => {

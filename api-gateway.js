@@ -433,7 +433,9 @@ module.exports = {
 	start: async (busAddress, mongoUrl, httpServerPort) => {
 		if (conf.enableStats) {
 			log.info("Enabling stats module, view by visiting /statz");
-			const db = await mongo.connect(mongoUrl);
+			const client = new mongo.MongoClient(mongoUrl);
+			const db = (await client.connect()).db();
+
 			responseTimeRepo = new ResponseTimeRepo(db);
 
 			if (!process.env.CI) await createIndexes(db);

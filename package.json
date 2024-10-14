@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"start": "node ./app.js",
-		"test": "node ./spec/support/jasmine-runner.js"
+		"test": "nyc --reporter=html --check-coverage --lines 85 node ./spec/support/jasmine-runner.js"
 	},
 	"dependencies": {
 		"batching-influx": "0.0.1",
@@ -19,22 +19,31 @@
 		"express-favicon": "^2.0.1",
 		"fruster-bus": "0.7.13",
 		"fruster-health": "~0.2.1",
-		"fruster-log": "0.0.18",
+		"fruster-log": "0.1.2",
 		"lodash": "^4.17.15",
 		"maxmind": "^4.1.0",
 		"minimatch": "^3.0.4",
-		"mongodb": "^2.2.36",
+		"mongodb": "^6.9.0",
 		"ms": "^2.1.2",
 		"ngeohash": "^0.6.3",
 		"pug": "^2.0.4",
-		"uuid": "^3.4.0",
+		"request": "^2.88.1",
+		"uuid": "^10.0.0",
 		"ws": "^2.3.1"
 	},
 	"devDependencies": {
-		"fruster-test-utils": "^0.5.0",
-		"jasmine": "^3.5.0",
+		"fruster-test-utils": "^0.7.0",
+		"jasmine": "^3.99.0",
 		"jasmine-spec-reporter": "^4.2.1",
 		"multiparty": "^4.2.3",
-		"request": "^2.88.1"
+		"nyc": "^17.1.0"
+	},
+	"nyc": {
+		"exclude": [
+			"spec/*",
+			"conf.js",
+			"web/*",
+			"docs/*"
+		]
 	}
 }
