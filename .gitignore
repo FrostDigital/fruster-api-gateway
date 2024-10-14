@@ -5,3 +5,5 @@ npm-debug.log
 *.mmdb
 
 spec/test-output.xlsx
+coverage
+.nyc_output

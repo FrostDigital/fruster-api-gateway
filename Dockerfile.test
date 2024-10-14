@@ -1,0 +1,12 @@
+FROM node:18-alpine
+
+RUN apk add --update bash && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+ADD . .
+
+RUN npm install
+
+ENV CI=1
+
+CMD ["npm", "test"]
