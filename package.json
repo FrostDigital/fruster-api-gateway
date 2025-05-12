@@ -44,7 +44,8 @@
 			"spec/*",
 			"conf.js",
 			"web/*",
-			"docs/*"
+			"docs/*",
+			"examples/*"
 		]
 	}
 }
