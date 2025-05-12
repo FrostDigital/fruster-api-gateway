@@ -216,6 +216,35 @@ module.exports = {
 	 * etc...
 	 */
 	rewriteRules: process.env.REWRITE_RULES || "",
+
+	/**
+	 * Whether or not to allow public/non authenticated users to connect via SSE.
+	 *
+	 * Default: false
+	 */
+	allowPublicSSEConnections: parseBool(process.env.ALLOW_PUBLIC_SSE_CONNECTIONS, false),
+
+	/**
+	 * Subject pattern for SSE events.
+	 *
+	 * Default: sse.out.:userId.>
+	 */
+	sseSubject: process.env.SSE_SUBJECT || "sse.out.:userId.>",
+
+	/**
+	 * Maximum number of SSE connections per user.
+	 *
+	 * Default: 10
+	 */
+	maxSSEConnectionsPerUser: parseInt(process.env.MAX_SSE_CONNECTIONS_PER_USER || "10"),
+
+	/**
+	 * SSE heartbeat interval in milliseconds.
+	 * Sends a comment to keep the connection alive.
+	 *
+	 * Default: 30s
+	 */
+	sseHeartbeatInterval: ms(process.env.SSE_HEARTBEAT_INTERVAL || "30s"),
 };
 
 function parseBool(str, defaultVal) {

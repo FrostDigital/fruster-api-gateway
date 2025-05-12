@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>SSE Demo</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			h1 {
+				color: #333;
+			}
+			.container {
+				display: flex;
+				gap: 20px;
+			}
+			.panel {
+				flex: 1;
+				border: 1px solid #ccc;
+				border-radius: 5px;
+				padding: 15px;
+			}
+			#events {
+				height: 300px;
+				overflow-y: auto;
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 5px;
+			}
+			.event {
+				margin-bottom: 10px;
+				padding: 10px;
+				background-color: white;
+				border-radius: 5px;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+			}
+			.event-time {
+				color: #666;
+				font-size: 0.8em;
+			}
+			.event-data {
+				margin-top: 5px;
+				font-family: monospace;
+				white-space: pre-wrap;
+			}
+			button {
+				padding: 8px 12px;
+				background-color: #4caf50;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				margin-top: 10px;
+			}
+			button:hover {
+				background-color: #45a049;
+			}
+			input,
+			select {
+				width: 100%;
+				padding: 8px;
+				margin-top: 5px;
+				margin-bottom: 10px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				box-sizing: border-box;
+			}
+			label {
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>SSE Demo</h1>
+
+		<div class="container">
+			<div class="panel">
+				<h2>Connect to SSE</h2>
+				<div>
+					<label for="channel">Channel:</label>
+					<input type="text" id="channel" value="notifications" placeholder="Enter channel name" />
+				</div>
+				<div>
+					<label for="token">JWT Token (optional):</label>
+					<input type="text" id="token" placeholder="Enter JWT token for authentication" />
+				</div>
+				<button id="connect">Connect</button>
+				<button id="disconnect" disabled>Disconnect</button>
+				<div id="connection-status">Not connected</div>
+			</div>
+
+			<div class="panel">
+				<h2>Send Test Event</h2>
+				<div>
+					<label for="user-id">User ID:</label>
+					<input type="text" id="user-id" placeholder="Enter user ID or * for broadcast" />
+				</div>
+				<div>
+					<label for="event-channel">Event Channel:</label>
+					<input type="text" id="event-channel" value="notifications" placeholder="Enter channel name" />
+				</div>
+				<div>
+					<label for="event-type">Event Type:</label>
+					<select id="event-type">
+						<option value="notification">Notification</option>
+						<option value="alert">Alert</option>
+						<option value="message">Message</option>
+						<option value="update">Update</option>
+					</select>
+				</div>
+				<div>
+					<label for="event-message">Message:</label>
+					<input
+						type="text"
+						id="event-message"
+						value="This is a test event"
+						placeholder="Enter event message"
+					/>
+				</div>
+				<button id="send-event">Send Event</button>
+				<div id="send-status"></div>
+			</div>
+		</div>
+
+		<h2>Events</h2>
+		<button id="clear-events">Clear Events</button>
+		<div id="events"></div>
+
+		<script>
+			let eventSource = null;
+
+			document.getElementById("connect").addEventListener("click", function () {
+				const channel = document.getElementById("channel").value;
+				const token = document.getElementById("token").value;
+
+				if (!channel) {
+					alert("Please enter a channel name");
+					return;
+				}
+
+				// Close existing connection if any
+				if (eventSource) {
+					eventSource.close();
+					eventSource = null;
+				}
+
+				// Construct URL with token if provided
+				let url = `/sse/${channel}`;
+				if (token) {
+					url += `?token=${token}`;
+				}
+
+				try {
+					eventSource = new EventSource(url);
+
+					eventSource.onopen = function () {
+						document.getElementById("connection-status").textContent = "Connected";
+						document.getElementById("connect").disabled = true;
+						document.getElementById("disconnect").disabled = false;
+						addEvent("Connection established");
+					};
+
+					eventSource.onmessage = function (event) {
+						try {
+							const data = JSON.parse(event.data);
+							addEvent("Event received", data);
+						} catch (e) {
+							addEvent("Event received (parse error)", event.data);
+						}
+					};
+
+					eventSource.onerror = function (error) {
+						document.getElementById("connection-status").textContent = "Error: " + error.type;
+						addEvent("Connection error", error);
+					};
+				} catch (error) {
+					document.getElementById("connection-status").textContent = "Error: " + error.message;
+					addEvent("Failed to establish connection", error);
+				}
+			});
+
+			document.getElementById("disconnect").addEventListener("click", function () {
+				if (eventSource) {
+					eventSource.close();
+					eventSource = null;
+					document.getElementById("connection-status").textContent = "Disconnected";
+					document.getElementById("connect").disabled = false;
+					document.getElementById("disconnect").disabled = true;
+					addEvent("Connection closed");
+				}
+			});
+
+			document.getElementById("send-event").addEventListener("click", async function () {
+				const userId = document.getElementById("user-id").value;
+				const channel = document.getElementById("event-channel").value;
+				const type = document.getElementById("event-type").value;
+				const message = document.getElementById("event-message").value;
+
+				if (!userId || !channel) {
+					alert("Please enter both user ID and channel");
+					return;
+				}
+
+				const eventData = {
+					type: type,
+					message: message,
+					timestamp: new Date().toISOString(),
+				};
+
+				try {
+					// This is a simplified example - in a real application, you would use
+					// your API to send the event to the server, which would then publish it
+					// to the appropriate SSE channel
+					const response = await fetch("/api/sse/publish", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							userId: userId,
+							channel: channel,
+							data: eventData,
+						}),
+					});
+
+					if (response.ok) {
+						document.getElementById("send-status").textContent = "Event sent successfully";
+						addEvent("Event sent", {
+							userId: userId,
+							channel: channel,
+							data: eventData,
+						});
+					} else {
+						const error = await response.json();
+						document.getElementById("send-status").textContent = "Error: " + error.message;
+						addEvent("Failed to send event", error);
+					}
+				} catch (error) {
+					document.getElementById("send-status").textContent = "Error: " + error.message;
+					addEvent("Failed to send event", error);
+				}
+			});
+
+			document.getElementById("clear-events").addEventListener("click", function () {
+				document.getElementById("events").innerHTML = "";
+			});
+
+			function addEvent(title, data) {
+				const eventsContainer = document.getElementById("events");
+				const eventElement = document.createElement("div");
+				eventElement.className = "event";
+
+				const timeElement = document.createElement("div");
+				timeElement.className = "event-time";
+				timeElement.textContent = new Date().toLocaleTimeString();
+
+				const titleElement = document.createElement("div");
+				titleElement.className = "event-title";
+				titleElement.textContent = title;
+
+				eventElement.appendChild(timeElement);
+				eventElement.appendChild(titleElement);
+
+				if (data) {
+					const dataElement = document.createElement("pre");
+					dataElement.className = "event-data";
+					dataElement.textContent = typeof data === "object" ? JSON.stringify(data, null, 2) : data;
+					eventElement.appendChild(dataElement);
+				}
+
+				eventsContainer.insertBefore(eventElement, eventsContainer.firstChild);
+			}
+		</script>
+	</body>
+</html>
