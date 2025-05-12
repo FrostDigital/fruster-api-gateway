@@ -36,7 +36,8 @@
 		"jasmine": "^3.99.0",
 		"jasmine-spec-reporter": "^4.2.1",
 		"multiparty": "^4.2.3",
-		"nyc": "^17.1.0"
+		"nyc": "^17.1.0",
+		"supertest": "^7.1.1"
 	},
 	"nyc": {
 		"exclude": [
