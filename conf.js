@@ -218,7 +218,17 @@ module.exports = {
 	rewriteRules: process.env.REWRITE_RULES || "",
 
 	/**
+	 * Enable Server-Sent Events (SSE) functionality.
+	 * When enabled, the API Gateway will initialize the SSE manager
+	 * and allow clients to connect to SSE endpoints.
+	 *
+	 * Default: false (disabled)
+	 */
+	enableSSE: parseBool(process.env.ENABLE_SSE, false),
+
+	/**
 	 * Whether or not to allow public/non authenticated users to connect via SSE.
+	 * Only relevant if enableSSE is true.
 	 *
 	 * Default: false
 	 */
@@ -226,6 +236,7 @@ module.exports = {
 
 	/**
 	 * Subject pattern for SSE events.
+	 * Only relevant if enableSSE is true.
 	 *
 	 * Default: sse.out.:userId.>
 	 */
@@ -233,6 +244,7 @@ module.exports = {
 
 	/**
 	 * Maximum number of SSE connections per user.
+	 * Only relevant if enableSSE is true.
 	 *
 	 * Default: 10
 	 */
@@ -241,6 +253,7 @@ module.exports = {
 	/**
 	 * SSE heartbeat interval in milliseconds.
 	 * Sends a comment to keep the connection alive.
+	 * Only relevant if enableSSE is true.
 	 *
 	 * Default: 30s
 	 */

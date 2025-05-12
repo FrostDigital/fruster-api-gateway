@@ -13,10 +13,13 @@ apiGateway
 		// Initialize WebBus for WebSocket connections
 		new FrusterWebBus(server);
 
-		// Initialize SSE Manager for Server-Sent Events
-		// Get the Express app from the server
-		const app = server._events.request;
-		new FrusterSSEManager(app);
+		// Initialize SSE Manager for Server-Sent Events if enabled
+		if (conf.enableSSE) {
+			log.info("Server-Sent Events (SSE) functionality is enabled");
+			// Get the Express app from the server
+			const app = server._events.request;
+			new FrusterSSEManager(app);
+		}
 
 		return server;
 	})

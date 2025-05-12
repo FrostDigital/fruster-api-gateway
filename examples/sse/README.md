@@ -2,6 +2,8 @@
 
 This directory contains example files demonstrating how to use the Server-Sent Events (SSE) implementation in the Fruster API Gateway.
 
+> **Note:** SSE functionality is **disabled by default** and requires explicit configuration to enable it.
+
 ## Files
 
 -   `sse-demo.html`: A simple HTML page that demonstrates how to connect to SSE endpoints and receive events
@@ -9,7 +11,22 @@ This directory contains example files demonstrating how to use the Server-Sent E
 
 ## How to Use
 
-### 1. Integrate the SSE Routes
+### 1. Enable SSE Functionality
+
+First, you need to enable SSE functionality in your configuration:
+
+```javascript
+// In conf.js
+enableSSE: true,
+```
+
+Or set the environment variable:
+
+```
+ENABLE_SSE=true
+```
+
+### 2. Integrate the SSE Routes
 
 To use the example routes in your application, you can modify your `app.js` file to include them:
 
@@ -96,6 +113,10 @@ function closeConnection() {
 The SSE implementation can be configured in `conf.js`:
 
 ```javascript
+// Enable Server-Sent Events (SSE) functionality
+// Default: false (disabled)
+enableSSE: true,
+
 // Whether to allow unauthenticated SSE connections
 allowPublicSSEConnections: false,
 

@@ -11,6 +11,8 @@ Server-Sent Events (SSE) is a server push technology enabling a client to receiv
 3. Authentication using the existing JWT token mechanism
 4. Simple JSON data format for events
 
+> **Note:** SSE functionality is **disabled by default** and requires explicit configuration to enable it. This allows for more aggressive testing and release without affecting existing functionality.
+
 ## Architecture
 
 The SSE implementation follows a similar pattern to the existing WebSocket implementation:
@@ -47,6 +49,10 @@ The core component that manages SSE connections, handles authentication, and for
 SSE-specific configuration options in `conf.js`:
 
 ```javascript
+// Enable Server-Sent Events (SSE) functionality
+// Default: false (disabled)
+enableSSE: true,
+
 // Whether to allow unauthenticated SSE connections
 allowPublicSSEConnections: false,
 
@@ -59,6 +65,8 @@ maxSSEConnectionsPerUser: 10,
 // SSE heartbeat interval
 sseHeartbeatInterval: ms("30s"),
 ```
+
+To enable SSE functionality, you must set `enableSSE: true` in your configuration or set the environment variable `ENABLE_SSE=true`.
 
 ### 3. Integration
 
