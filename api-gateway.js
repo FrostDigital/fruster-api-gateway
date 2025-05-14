@@ -22,6 +22,7 @@ const reqIdMiddleware = require("./lib/middleware/reqid-middleware");
 const httpMetricMiddleware = require("./lib/middleware/http-metric-middleware");
 const noCacheMiddleware = require("./lib/middleware/no-cache-middleware");
 const decodeTokenMiddleware = require("./lib/middleware/decode-token-middleware");
+const FrusterSSEManager = require("./lib/sse/FrusterSSEManager");
 
 const dateStarted = new Date();
 
@@ -47,7 +48,7 @@ const parsedRewriteRules = [];
  * so it can receive incoming requests and pass them thru to
  * internal services.
  */
-function createExpressApp() {
+function createExpressApp(sseManager) {
 	const app = express();
 
 	app.use(favicon(__dirname + "/favicon.ico"));
@@ -101,6 +102,13 @@ function createExpressApp() {
 	}
 
 	app.use(decodeTokenMiddleware());
+
+	// Initialize SSE Manager for Server-Sent Events if enabled
+	if (sseManager) {
+		log.info("Server-Sent Events (SSE) functionality is enabled");
+		sseManager.setupRoutes(app);
+	}
+
 	app.use(handleReq);
 
 	app.use((err, req, res, next) => {
@@ -446,9 +454,11 @@ module.exports = {
 			influxRepo = await createInfluxRepo();
 		}
 
+		const sseManager = conf.enableSSE ? new FrusterSSEManager() : null;
+
 		const startHttpServer = new Promise((resolve, reject) => {
 			const server = http
-				.createServer({ maxHeaderSize: conf.maxHeaderSize }, createExpressApp())
+				.createServer({ maxHeaderSize: conf.maxHeaderSize }, createExpressApp(sseManager))
 				.listen(httpServerPort);
 
 			server.on("error", reject);
@@ -461,11 +471,15 @@ module.exports = {
 			return resolve(server);
 		});
 
-		const connectToBus = () => {
-			return bus.connect(busAddress);
-		};
+		const server = await startHttpServer;
 
-		return startHttpServer.then((server) => connectToBus().then(() => server));
+		await bus.connect(busAddress);
+
+		if (sseManager) {
+			sseManager.setupBusSubscriptions();
+		}
+
+		return server;
 	},
 };
 

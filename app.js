@@ -3,7 +3,6 @@ const log = require("fruster-log");
 const bus = require("fruster-bus");
 const apiGateway = require("./api-gateway");
 const FrusterWebBus = require("./lib/web-bus/FrusterWebBus");
-const FrusterSSEManager = require("./lib/sse/FrusterSSEManager");
 
 require("fruster-health").start(bus);
 
@@ -12,15 +11,6 @@ apiGateway
 	.then((server) => {
 		// Initialize WebBus for WebSocket connections
 		new FrusterWebBus(server);
-
-		// Initialize SSE Manager for Server-Sent Events if enabled
-		if (conf.enableSSE) {
-			log.info("Server-Sent Events (SSE) functionality is enabled");
-			// Get the Express app from the server
-			const app = server._events.request;
-			new FrusterSSEManager(app);
-		}
-
 		return server;
 	})
 	.then(() => {
