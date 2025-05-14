@@ -227,14 +227,6 @@ module.exports = {
 	enableSSE: parseBool(process.env.ENABLE_SSE, false),
 
 	/**
-	 * Whether or not to allow public/non authenticated users to connect via SSE.
-	 * Only relevant if enableSSE is true.
-	 *
-	 * Default: false
-	 */
-	allowPublicSSEConnections: parseBool(process.env.ALLOW_PUBLIC_SSE_CONNECTIONS, false),
-
-	/**
 	 * Subject pattern for SSE events.
 	 * Only relevant if enableSSE is true.
 	 *

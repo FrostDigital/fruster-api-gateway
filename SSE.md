@@ -8,7 +8,7 @@ Server-Sent Events (SSE) is a server push technology enabling a client to receiv
 
 1. Clients to establish persistent connections to specific channels
 2. Internal services to publish events to specific users or broadcast to all users
-3. Authentication using the existing JWT token mechanism
+3. Authentication using the existing JWT token mechanism (required for all SSE connections)
 4. Simple JSON data format for events
 
 > **Note:** SSE functionality is **disabled by default** and requires explicit configuration to enable it. This allows for more aggressive testing and release without affecting existing functionality.
@@ -25,9 +25,8 @@ sequenceDiagram
     participant Internal Service
 
     Client->>API Gateway: GET /sse/notifications
-    Note over API Gateway: Authenticate using JWT
-    API Gateway->>Auth Service: Decode token
-    Auth Service-->>API Gateway: User info
+    Note over API Gateway: Authentication via decode-token-middleware
+    Note over API Gateway: req.user already populated
     API Gateway->>API Gateway: Create SSE connection
     API Gateway-->>Client: SSE connection established
 
@@ -52,9 +51,6 @@ SSE-specific configuration options in `conf.js`:
 // Enable Server-Sent Events (SSE) functionality
 // Default: false (disabled)
 enableSSE: true,
-
-// Whether to allow unauthenticated SSE connections
-allowPublicSSEConnections: false,
 
 // Subject pattern for SSE events
 sseSubject: "sse.out.:userId.>",

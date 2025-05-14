@@ -31,48 +31,18 @@ describe("FrusterSSEManager", () => {
 			// Initialize the SSE manager directly, similar to how it's done in app.js
 			sseManager = new FrusterSSEManager(app);
 
-			// Register mock handler for auth service
-			registerMockAuthServiceResponse();
+			// No need to register mock auth service response anymore
+			// as we're using req.user directly
 		},
 	});
 
 	afterEach(() => {
-		conf.allowPublicSSEConnections = false;
 		conf.enableSSE = false;
 	});
 
-	function registerMockAuthServiceResponse() {
-		bus.subscribe({
-			subject: "auth-service.decode-token",
-			handle: (req) => {
-				const usersByToken = {
-					validToken: {
-						id: mockUserId,
-						firstName: "Test",
-						lastName: "User",
-						scopes: ["profile.get"],
-					},
-					validToken2: {
-						id: mockUserId2,
-						firstName: "Test",
-						lastName: "User2",
-						scopes: ["profile.get"],
-					},
-				};
+	// No longer needed as we're using req.user directly
 
-				return {
-					status: 200,
-					data: usersByToken[req.data],
-				};
-			},
-		});
-	}
-
-	it("should reject unauthenticated SSE connections when public connections are not allowed", async () => {
-		conf.allowPublicSSEConnections = false;
-
-		registerMockAuthServiceResponse();
-
+	it("should reject unauthenticated SSE connections", async () => {
 		// Use supertest for this test since we're just checking the initial response
 		const response = await request(app).get(sseEndpoint).set("Accept", "text/event-stream");
 
@@ -82,11 +52,7 @@ describe("FrusterSSEManager", () => {
 		expect(response.text).toContain("Authentication required");
 	});
 
-	it("should allow public SSE connections when configured", (done) => {
-		conf.allowPublicSSEConnections = true;
-
-		registerMockAuthServiceResponse();
-
+	it("should accept authenticated SSE connections with valid user", (done) => {
 		// Create a mock response object to simulate an SSE connection
 		const mockResponse = {
 			writeHead: jasmine.createSpy("writeHead").and.callFake(() => {
@@ -103,7 +69,6 @@ describe("FrusterSSEManager", () => {
 				// Check if this is the connection established message
 				if (data.includes("connection_established")) {
 					expect(data).toContain("connection_established");
-					expect(data).not.toContain("Authentication required");
 					done();
 				}
 				return mockResponse;
@@ -111,52 +76,16 @@ describe("FrusterSSEManager", () => {
 			end: jasmine.createSpy("end"),
 		};
 
-		// Simulate a request
+		// Simulate a request with authenticated user
 		const mockReq = {
 			params: { channelName: sseChannelName },
-			cookies: {},
-			headers: {},
-			on: (event, callback) => {
-				// Store the close callback but don't call it
-				mockReq.closeCallback = callback;
+			reqId: "test-req-id",
+			user: {
+				id: mockUserId,
+				firstName: "Test",
+				lastName: "User",
+				scopes: ["profile.get"],
 			},
-		};
-
-		// Call the handler directly
-		sseManager._handleSSERequest(mockReq, mockResponse);
-	});
-
-	it("should accept authenticated SSE connections with valid token", (done) => {
-		registerMockAuthServiceResponse();
-
-		// Create a mock response object to simulate an SSE connection
-		const mockResponse = {
-			writeHead: jasmine.createSpy("writeHead").and.callFake(() => {
-				// Verify headers were set correctly
-				expect(mockResponse.writeHead).toHaveBeenCalledWith(
-					200,
-					jasmine.objectContaining({
-						"Content-Type": "text/event-stream",
-					})
-				);
-				return mockResponse;
-			}),
-			write: jasmine.createSpy("write").and.callFake((data) => {
-				// Check if this is the connection established message
-				if (data.includes("connection_established")) {
-					expect(data).toContain("connection_established");
-					done();
-				}
-				return mockResponse;
-			}),
-			end: jasmine.createSpy("end"),
-		};
-
-		// Simulate a request with authentication
-		const mockReq = {
-			params: { channelName: sseChannelName },
-			cookies: { [conf.authCookieName]: "validToken" },
-			headers: {},
 			on: (event, callback) => {
 				// Store the close callback but don't call it
 				mockReq.closeCallback = callback;
@@ -173,8 +102,6 @@ describe("FrusterSSEManager", () => {
 		// that can maintain the connection and receive events.
 		//
 		// For this test, we'll verify that the internal methods work correctly
-
-		registerMockAuthServiceResponse();
 
 		// Create a mock response object to simulate an SSE connection
 		const mockResponse = {
@@ -197,8 +124,6 @@ describe("FrusterSSEManager", () => {
 	});
 
 	it("should handle SSE events broadcast to all users on a channel", () => {
-		registerMockAuthServiceResponse();
-
 		// Create mock response objects to simulate SSE connections
 		const mockResponse1 = {
 			writeHead: jasmine.createSpy("writeHead1"),
@@ -259,7 +184,6 @@ describe("FrusterSSEManager", () => {
 
 	it("should enforce connection limits per user", async () => {
 		conf.maxSSEConnectionsPerUser = 2;
-		registerMockAuthServiceResponse();
 
 		// Create mock response objects
 		const mockResponse1 = {

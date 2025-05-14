@@ -58,7 +58,7 @@ The demo page allows you to:
 
 The SSE implementation in Fruster API Gateway provides:
 
-1. **Authentication**: Uses the existing JWT token mechanism
+1. **Authentication**: Uses the existing JWT token mechanism (required for all SSE connections)
 2. **Channel-based Subscriptions**: Clients can connect to specific channels via URL patterns like `/sse/:channelName`
 3. **Targeted Events**: Internal services can publish events to specific users
 4. **Broadcast Support**: Events can be broadcast to all users on a channel
@@ -116,9 +116,6 @@ The SSE implementation can be configured in `conf.js`:
 // Enable Server-Sent Events (SSE) functionality
 // Default: false (disabled)
 enableSSE: true,
-
-// Whether to allow unauthenticated SSE connections
-allowPublicSSEConnections: false,
 
 // Subject pattern for SSE events
 sseSubject: "sse.out.:userId.>",
