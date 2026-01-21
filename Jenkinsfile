@@ -31,6 +31,7 @@ pipeline {
                     branch 'develop'
                     branch 'main'
                     branch 'master'
+					branch 'beta'
                 }
             }
 

@@ -216,6 +216,40 @@ module.exports = {
 	 * etc...
 	 */
 	rewriteRules: process.env.REWRITE_RULES || "",
+
+	/**
+	 * Enable Server-Sent Events (SSE) functionality.
+	 * When enabled, the API Gateway will initialize the SSE manager
+	 * and allow clients to connect to SSE endpoints.
+	 *
+	 * Default: false (disabled)
+	 */
+	enableSSE: parseBool(process.env.ENABLE_SSE, false),
+
+	/**
+	 * Subject pattern for SSE events.
+	 * Only relevant if enableSSE is true.
+	 *
+	 * Default: sse.out.:userId.>
+	 */
+	sseSubject: process.env.SSE_SUBJECT || "sse.out.:userId.>",
+
+	/**
+	 * Maximum number of SSE connections per user.
+	 * Only relevant if enableSSE is true.
+	 *
+	 * Default: 10
+	 */
+	maxSSEConnectionsPerUser: parseInt(process.env.MAX_SSE_CONNECTIONS_PER_USER || "10"),
+
+	/**
+	 * SSE heartbeat interval in milliseconds.
+	 * Sends a comment to keep the connection alive.
+	 * Only relevant if enableSSE is true.
+	 *
+	 * Default: 30s
+	 */
+	sseHeartbeatInterval: ms(process.env.SSE_HEARTBEAT_INTERVAL || "30s"),
 };
 
 function parseBool(str, defaultVal) {
