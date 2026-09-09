@@ -36,8 +36,11 @@ describe("FrusterSSEManager", () => {
 		},
 	});
 
+	const defaultMaxConnections = conf.maxSSEConnectionsPerUser;
+
 	afterEach(() => {
 		conf.enableSSE = false;
+		conf.maxSSEConnectionsPerUser = defaultMaxConnections;
 	});
 
 	// No longer needed as we're using req.user directly
@@ -218,6 +221,91 @@ describe("FrusterSSEManager", () => {
 		const totalConnections = Object.values(sseManager._connections[mockUserId]).flat().length;
 		expect(totalConnections).toBe(2);
 		expect(totalConnections >= conf.maxSSEConnectionsPerUser).toBe(true);
+	});
+
+	const mockRes = (name) => ({
+		writeHead: jasmine.createSpy(`${name}.writeHead`),
+		write: jasmine.createSpy(`${name}.write`),
+		end: jasmine.createSpy(`${name}.end`),
+		on: jasmine.createSpy(`${name}.on`),
+	});
+
+	const mockReqFor = (userId) => ({
+		params: { channelName: sseChannelName },
+		reqId: "test-req-id",
+		user: { id: userId, scopes: [] },
+		clearTimeout: jasmine.createSpy("clearTimeout"),
+		on: jasmine.createSpy("req.on"),
+	});
+
+	it("should exempt a stream from the gateway request timeout", () => {
+		const req = mockReqFor(mockUserId);
+
+		sseManager._handleSSERequest(req, mockRes("res"));
+
+		expect(req.clearTimeout).toHaveBeenCalled();
+	});
+
+	it("should release the stream when either the request or the response closes", () => {
+		const req = mockReqFor(mockUserId);
+		const res = mockRes("res");
+
+		sseManager._handleSSERequest(req, res);
+		expect(sseManager.getStats().connections).toBe(1);
+
+		const resClose = res.on.calls.allArgs().find(([event]) => event === "close")[1];
+		resClose();
+		expect(sseManager.getStats().connections).toBe(0, "response close alone releases it");
+
+		// The request's close arriving afterwards must be harmless
+		const reqClose = req.on.calls.allArgs().find(([event]) => event === "close")[1];
+		expect(() => reqClose()).not.toThrow();
+		expect(sseManager.getStats().connections).toBe(0);
+	});
+
+	it("should prune dead streams on heartbeat instead of counting them forever", () => {
+		const live = mockRes("live");
+		const dead = { ...mockRes("dead"), destroyed: true };
+		const endedByProxy = { ...mockRes("ended"), socket: { destroyed: true } };
+
+		sseManager._addConnection(mockUserId, sseChannelName, live);
+		sseManager._addConnection(mockUserId, sseChannelName, dead);
+		sseManager._addConnection(mockUserId2, sseChannelName, endedByProxy);
+		expect(sseManager.getStats().connections).toBe(3);
+
+		sseManager._sendHeartbeat();
+
+		expect(sseManager.getStats().connections).toBe(1);
+		expect(live.write).toHaveBeenCalledWith(": heartbeat\n\n");
+		expect(dead.write).not.toHaveBeenCalled();
+		expect(sseManager._connections[mockUserId2]).toBeUndefined();
+	});
+
+	it("should not let dead streams lock a user out of the connection limit", () => {
+		conf.maxSSEConnectionsPerUser = 2;
+
+		sseManager._addConnection(mockUserId, sseChannelName, { ...mockRes("dead1"), destroyed: true });
+		sseManager._addConnection(mockUserId, sseChannelName, { ...mockRes("dead2"), writableEnded: true });
+
+		const res = mockRes("fresh");
+		sseManager._handleSSERequest(mockReqFor(mockUserId), res);
+
+		expect(res.end).not.toHaveBeenCalled();
+		expect(res.write.calls.allArgs().some(([data]) => data.includes("Maximum connections exceeded"))).toBe(false);
+		expect(sseManager.getStats().connections).toBe(1);
+	});
+
+	it("should still refuse an eleventh live stream", () => {
+		conf.maxSSEConnectionsPerUser = 1;
+
+		sseManager._addConnection(mockUserId, sseChannelName, mockRes("live"));
+
+		const res = mockRes("refused");
+		sseManager._handleSSERequest(mockReqFor(mockUserId), res);
+
+		expect(res.write.calls.allArgs().some(([data]) => data.includes("Maximum connections exceeded"))).toBe(true);
+		expect(res.end).toHaveBeenCalled();
+		expect(sseManager.getStats().connections).toBe(1);
 	});
 
 	it("should provide connection statistics", () => {
